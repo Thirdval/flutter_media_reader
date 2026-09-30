@@ -8,9 +8,10 @@ per platform. Files never leave the app: exporting is the host's
 action, under the host's policy.
 
 **Status:** accepted by the owner on 2026-09-30. R0 (this scaffold)
-was built the same day. R1 onward belong to this repository's own
-session. Progress is tracked in §5, one row per phase, updated in the
-same commit as the work, with an owner check after each phase.
+and R1 (the core and the shell) were built the same day; both wait for
+the owner's check. R1 onward belong to this repository's own session.
+Progress is tracked in §5, one row per phase, updated in the same
+commit as the work, with an owner check after each phase.
 
 **Owner decisions (2026-09-30):**
 - Video goes through the `video_player` API with `fvp` as its engine
@@ -22,6 +23,10 @@ same commit as the work, with an owner check after each phase.
   (MR1).
 - Copying text is not an export in any kind of file, not only in a
   PDF: it stays allowed under a no-download policy (MR9, R5, R6).
+- Every public type takes the `MediaReader` prefix (`MediaReaderItem`,
+  `MediaReaderEngine`, and so on). `flutter_reader`, which Tendvine's
+  chat views import, already exports `ReaderItem` and `ReaderEngine`
+  (§2.2).
 
 **Owner decisions (2026-09-30, relayed by Tendvine's backend
 session):**
@@ -68,8 +73,8 @@ host (Tendvine) lends:
 - its policy (may this member export; where may the reader cache).
 
 **Phases:**
-- R0 scaffold (done).
-- R1 the core and the shell.
+- R0 scaffold (built).
+- R1 the core and the shell (built).
 - R2–R6 one kind of file each: pictures, video, audio with waveform,
   PDF, text/tables/archives.
 - R7 Office and HEIC through the host's derivatives.
@@ -128,21 +133,23 @@ The package draws none of that styling itself: it offers the slots
   - bottom start (actions);
   - bottom end (more);
   - a context pill;
-  - an engine's own status ("1 of 15", a time).
+  - an engine's own status ("1 of 15", a time);
+  - the host's actions on a file's card.
 
   Each slot receives the current item and the reader's state. The
   package ships a plain default for each.
-- **Items:** a `ReaderItem` describes a file.
+- **Items:** a `MediaReaderItem` describes a file.
   - Its identity and name, content type and size, the kind the host
     already knows (the server's family) if any.
   - A source: how to reach the bytes.
-  - A preview source: a derivative, such as the PDF of an Office file
-    or the JPEG of a HEIC.
+  - A preview: a derivative with its own content type, such as the PDF
+    of an Office file or the JPEG of a HEIC.
   - A poster (placeholder), waveform peaks and duration.
   - An opaque host payload for the chrome.
 - **Sources:**
-  - a remote source is resolved when needed and again when it expires:
-    the host returns a URL and headers;
+  - a remote source is resolved when needed and again when it expires
+    or is refused: the host returns a URL, headers, and the expiry
+    where it knows it;
   - a local file;
   - bytes in memory.
 - **Engines:**
@@ -152,7 +159,7 @@ The package draws none of that styling itself: it offers the slots
     wins;
   - the last one is always the file's card: name, kind, size, and the
     host's actions.
-- **Policy:** `ReaderPolicy`.
+- **Policy:** `MediaReaderPolicy`.
   - Whether export is allowed: the reader tells the chrome, so the
     host shows or hides Share and Save.
   - Where engines may cache: none, memory, or a directory the host
@@ -160,56 +167,138 @@ The package draws none of that styling itself: it offers the slots
   - The package never writes anywhere else and never hands a file to
     another app.
 
-### 2.2 The host contract (a sketch; R1 settles the names)
+### 2.2 The host contract (settled in R1)
 
 ```dart
 Future<void> showMediaReader(
   BuildContext context, {
-  required List<ReaderItem> items,
+  required List<MediaReaderItem> items,
   int initialIndex = 0,
-  ReaderChrome chrome = const ReaderChrome(), // slot builders
-  ReaderPolicy policy = const ReaderPolicy(), // export, cache
-  ReaderEngines engines = ReaderEngines.standard, // the registry
+  MediaReaderChrome chrome = const MediaReaderChrome(), // the slots
+  MediaReaderPolicy policy = const MediaReaderPolicy(), // export, cache
+  MediaReaderEngines engines = MediaReaderEngines.standard,
+  ValueChanged<MediaReaderItem>? onItemShown, // on screen, not prepared
 });
 
-class const ReaderItem({
+// The same reader as a widget, for a pane. Rebuilt with another list,
+// it keeps the file on screen: pages follow their item's id.
+class const MediaReaderView({
+  required final List<MediaReaderItem> items,
+  // ... as above, and:
+  final VoidCallback? onDismissed, // null: it cannot be dismissed
+  final bool autofocus = true,
+});
+
+class const MediaReaderItem({
   required final String id,
   required final String name,
   final String? contentType,
   final int? size,
   final MediaKind? kind, // the host's own reading wins
-  required final ReaderSource source,
-  final ReaderSource? preview, // Office → PDF, HEIC → JPEG
+  required final MediaReaderSource source,
+  final MediaReaderPreview? preview, // Office → PDF, HEIC → JPEG
   final WidgetBuilder? poster, // blurhash, thumbnail
   final List<double>? peaks, // 0..1, from the host (MR6)
   final Duration? duration,
   final Object? data, // the host's, for the chrome
 });
 
-sealed class ReaderSource {
-  // Resolved when needed, and again after a refusal (expired URL).
-  const factory ReaderSource.remote(
-    Future<({Uri uri, Map<String, String> headers})> Function() resolve,
-  ) = RemoteSource;
-  const factory ReaderSource.file(String path) = FileSource;
-  const factory ReaderSource.bytes(Uint8List bytes) = BytesSource;
-}
-
-class const ReaderPolicy({
-  final bool canExport = true,
-  final ReaderCache cache = const ReaderCache.memory(),
+// A derivative with its own type: its own kind's engine shows it.
+class const MediaReaderPreview({
+  required final MediaReaderSource source,
+  final String? contentType,
+  final String? name,
+  final MediaKind? kind,
 });
 
-abstract interface class ReaderEngine {
+sealed class const MediaReaderSource() {
+  // Resolved when needed, kept until it expires or is refused, then
+  // resolved again.
+  const factory remote(Future<MediaReaderLocation> Function() resolve);
+  const factory file(String path);
+  const factory bytes(Uint8List bytes);
+}
+
+class const MediaReaderLocation(
+  final Uri uri, {
+  final Map<String, String> headers = const {},
+  final DateTime? expiresAt, // asked again shortly before
+});
+
+// Thrown by a resolve: the page shows the card, in the host's words.
+class const MediaReaderUnavailable(final String reason);
+
+class const MediaReaderPolicy({
+  final bool canExport = true,
+  // With export off, a directory reads as memory (MR9).
+  final MediaReaderCache cache = const MediaReaderCache.memory(),
+});
+
+class const MediaReaderChrome({
+  // Each slot: Widget Function(BuildContext, MediaReaderState).
+  topStart, topEnd, bottomStart, bottomEnd, contextPill, status,
+  cardActions, // the host's actions on a file's card
+  background, foreground,
+  strings, // the words the package draws or speaks
+});
+
+// What a slot is told.
+class const MediaReaderState({
+  item, index, count, policy, // and canExport
+  status, // the engine's own
+  close, // null where the reader cannot be closed
+});
+
+abstract interface class MediaReaderEngine() {
   String get id;
-  bool canShow(ReaderItem item, TargetPlatform platform);
-  Widget build(BuildContext context, ReaderItem item, ReaderPage page);
+  bool canShow(MediaReaderItem item, TargetPlatform platform);
+  Widget build(
+    BuildContext context,
+    MediaReaderItem item, // the host's, or its preview as an item
+    MediaReaderPage page,
+  );
+}
+
+// An engine's page: what the shell tells it, what it tells the shell.
+final class MediaReaderPage {
+  MediaReaderItem get item; // always the host's
+  ValueListenable<bool> get isCurrent; // on screen, not a neighbour
+  ValueListenable<bool> get chromeVisible;
+  final ValueNotifier<String?> status; // "1 of 15", a time
+  final ValueNotifier<bool> holdsPaging; // it owns sideways drags
+  final ValueNotifier<bool> holdsDismiss; // and downward ones
+  Future<MediaReaderLocation> resolve(); // the kept location
+  Future<MediaReaderLocation> renew(MediaReaderLocation refused);
+  void fail(String reason); // the card takes the engine's place
 }
 ```
 
+What R1 settled beyond the sketch it started from:
+- **Names:** every public type is `MediaReader*` (owner, 2026-09-30).
+- **A resolve's answer** is a class, `MediaReaderLocation`, not a
+  record: it carries an optional expiry, and can grow without breaking
+  every host.
+- **The preview** has its own content type and kind. The registry asks
+  the engines about the file first, then about its preview, and falls
+  back to the card.
+- **`MediaReaderPage`** is defined: it was named in the sketch and
+  left open.
+- **`MediaReaderUnavailable`:** how a host's resolve gives the card its
+  reason.
+- **`cardActions`:** a seventh slot, because the card carries the
+  host's actions.
+- **`MediaReaderStrings`:** the package draws and speaks a few words
+  (the card, the plain defaults, the page announcement); a host passes
+  its own.
+- **`onItemShown`:** a resolve is not a view; the host hears when an
+  item comes on screen.
+- **Export off and a directory cache:** the directory reads as memory,
+  so MR9 holds whatever the host passes.
+
 Also exported for hosts:
-- `ReaderAudioBar`: the inline player a chat shows for a voice note;
-- `ReaderWaveform`: peaks, progress and drag-to-seek;
+- `MediaReaderAudioBar`: the inline player a chat shows for a voice
+  note;
+- `MediaReaderWaveform`: peaks, progress and drag-to-seek;
 - `MediaKind`: done in R0.
 
 ### 2.3 Engines by kind and platform
@@ -219,7 +308,7 @@ Also exported for hosts:
 | Picture | Flutter `Image` + `InteractiveViewer` | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Video | `video_player` API: native AVPlayer/ExoPlayer; `fvp` where there is none (MR3) | AVPlayer | ExoPlayer | AVPlayer | fvp | fvp |
 | Audio | `just_audio`; `fvp` audio-only on the desktop (MR4) | just_audio | just_audio | just_audio | fvp | fvp |
-| Waveform | `ReaderWaveform` from host peaks | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Waveform | `MediaReaderWaveform` from host peaks | ✓ | ✓ | ✓ | ✓ | ✓ |
 | PDF | `pdfrx` (PDFium) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Office | the host's PDF derivative → `pdfrx` (MR7) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Text, code, JSON, XML | Flutter text, monospace, pretty print | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -298,19 +387,20 @@ session the same day.
 - **Done when:** analyze is clean, the tests pass, and the example
   builds.
 
-### R1 — Core and shell (L)
+### R1 — Core and shell (L) · built
 
 - **Types:**
-  - `ReaderItem`, `ReaderSource` (remote, which re-resolves after a
-    refusal; file; bytes), `ReaderPolicy`, `ReaderCache`;
-  - `ReaderEngine`, the ordered `ReaderEngines` registry, and the
-    file's card engine.
+  - `MediaReaderItem`, `MediaReaderSource` (remote, which re-resolves
+    after a refusal; file; bytes), `MediaReaderPolicy`,
+    `MediaReaderCache`;
+  - `MediaReaderEngine`, the ordered `MediaReaderEngines` registry,
+    and the file's card engine.
 - **The shell:**
   - `showMediaReader` and `MediaReaderView`;
   - paging with neighbours prepared and far pages released;
   - drag to dismiss; Esc and the arrow keys; the chrome toggled by a
     tap;
-  - the chrome slots with plain defaults, and `ReaderChrome`;
+  - the chrome slots with plain defaults, and `MediaReaderChrome`;
   - semantics: each page announced; slots in reading order.
 - **Guard:** a test that fails when the pubspec gains a hand-off
   dependency (MR8).
@@ -322,6 +412,22 @@ session the same day.
   - with `canExport: false` the chrome learns it;
   - tests cover the registry order, the fallback, re-resolution after
     an expired URL, and disposal.
+- **Built (2026-09-30):**
+  - the contract as §2.2 now states it, with what R1 settled beyond
+    the sketch listed there;
+  - 117 tests, with fake engines and sources; the guard reads the
+    pubspec and every import under `lib/`;
+  - the example opens its samples in the reader, under a host's chrome
+    or the plain defaults, with export on or off; its integration test
+    ran on a Pixel 10a (Android 17) and on macOS;
+  - built on MR10, MR11 and MR14 as recommended: those rows still wait
+    for the owner.
+- **Left for later phases:**
+  - no engine exists yet, so every file shows its card;
+  - a retry from the card comes with R7, and a slot for an engine's
+    transport controls with R3;
+  - iOS was not run (the owner runs iOS builds), nor Windows or Linux
+    (no machine; planned from R3).
 
 ### R2 — Pictures (M)
 
@@ -355,7 +461,7 @@ session the same day.
 
 - **Engine:** `AudioEngine` (MR4), with one player at a time across
   the app (a coordinator the host can share).
-- **`ReaderWaveform`:**
+- **`MediaReaderWaveform`:**
   - peaks drawn as bars, progress coloured, drag to seek;
   - slider semantics;
   - a plain track without peaks.
@@ -363,7 +469,7 @@ session the same day.
   the engine.
 - **Interruptions:** audio-session interruptions and ducking (calls,
   other apps).
-- **`ReaderAudioBar`:** the inline form, for a chat's voice notes.
+- **`MediaReaderAudioBar`:** the inline form, for a chat's voice notes.
 - **Done when:** an m4a, mp3, ogg/opus or wav file plays and seeks on
   each platform in the matrix. A voice note inline and the same file
   in the reader share one player. The waveform tests cover peaks,
@@ -409,9 +515,10 @@ session the same day.
 
 ### R7 — Derivatives: Office and HEIC via the host (S)
 
-- **Preview:** `ReaderItem.preview` is shown by its own kind's engine
-  (an Office file's PDF through `pdfrx`, a HEIC's JPEG as a picture).
-  States for "being prepared" and "could not be prepared", with retry.
+- **Preview:** `MediaReaderItem.preview` is shown by its own kind's
+  engine (an Office file's PDF through `pdfrx`, a HEIC's JPEG as a
+  picture); the registry has chosen it that way since R1. States for
+  "being prepared" and "could not be prepared", with retry.
 - **Done when:** a docx with a PDF preview reads as the PDF, and one
   without shows its card saying so.
 
@@ -441,7 +548,7 @@ Done in Tendvine, against a tag, in four steps.
   - unknown kinds show the card.
 - **R9b**, after R5: PDF.
 - **R9c**, after R4:
-  - audio files, and voice notes on `ReaderAudioBar`;
+  - audio files, and voice notes on `MediaReaderAudioBar`;
   - peaks captured while recording (the host's `record` amplitude
     stream).
 - **R9d**, after R6 and R7: text, tables, archives, and Office through
@@ -467,10 +574,10 @@ In every step:
 | Phase | Title | Status | Commit / tag | Owner check |
 | --- | --- | --- | --- | --- |
 | R0 | Scaffold: repo, pins, lints, CI, example for five platforms, `MediaKind`, plan, CLAUDE.md | ☑ built 2026-09-30 — analyze clean, 5 tests, example builds for macOS | initial commit | ☐ |
-| R1 | Core and shell: items, sources, policy, registry, pager, chrome slots, the card engine | ☐ | | ☐ |
+| R1 | Core and shell: items, sources, policy, registry, pager, chrome slots, the card engine | ☑ built 2026-09-30 — analyze clean, 117 tests, example run on Android and macOS | the 0.1.0 commit; tag `v0.1.0` when the owner asks | ☐ |
 | R2 | Pictures | ☐ | | ☐ |
 | R3 | Video (`video_player` + `fvp`) | ☐ | | ☐ |
-| R4 | Audio and waveform, `ReaderAudioBar` | ☐ | | ☐ |
+| R4 | Audio and waveform, `MediaReaderAudioBar` | ☐ | | ☐ |
 | R5 | PDF (`pdfrx`) | ☐ | | ☐ |
 | R6 | Text, Markdown, tables, archives | ☐ | | ☐ |
 | R7 | Derivatives: Office and HEIC through the host | ☐ | | ☐ |
@@ -483,6 +590,12 @@ In every step:
 | Phase | iOS | Android | macOS | Windows | Linux |
 | --- | --- | --- | --- | --- | --- |
 | R0 | – | – | ✓ build | – | – |
+| R1 | – | ✓ | ✓ | – | – |
+
+R1 was run as the example's integration test (four tests: open, page,
+close by key, by button and by drag, export on and off) on a Pixel 10a
+with Android 17 and on macOS 27. iOS was not run: the owner runs iOS
+builds. Windows and Linux were not run: no machine.
 
 Legend: ☐ not started · ◐ in progress · ☑ done (commit) · ✔ owner
 verified · ⊘ blocked (reason). Update the row in the same commit as
@@ -529,7 +642,7 @@ commit and a guide when each batch lands.
 - **B3 — The community download policy.**
   - Agreed shape: a new permission, `files:export`, on in every role
     by default; `canExport` on the member's capabilities and on each
-    resolve. It feeds `ReaderPolicy.canExport` (MR9).
+    resolve. It feeds `MediaReaderPolicy.canExport` (MR9).
   - A resolve carries its intent, `view` or `export`. A view is served
     inline; an export is audited and served as an attachment.
   - The CDN already accepts a signed disposition
