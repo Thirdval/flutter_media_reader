@@ -1,3 +1,27 @@
+## 0.4.0 — 2026-09-30
+
+Phase R4, audio and the waveform (MEDIA_READER_PLAN.md):
+
+- `MediaReaderAudioEngine`: `just_audio` on iOS, Android and macOS,
+  the `video_player` API (through `fvp`) on Windows and Linux. A
+  format the platform's player does not play, an Ogg on an iPhone, is
+  played through its preview.
+- `MediaReaderAudioCoordinator`: one audio player for the app. A file
+  that starts stops the one that was playing, which keeps its place;
+  a video that starts stops the audio, and the other way round.
+- `MediaReaderAudioBar`: the inline player for a chat's voice notes.
+  It and the reader's page for the same file are one session: one
+  player, one location asked of the host, and either place's controls.
+- `MediaReaderWaveform`: the host's peaks as bars, the part played in
+  full colour, a tap or a drag to seek, a slider to a screen reader;
+  a plain track without peaks. The plain transport uses it.
+- A location that has run out is renewed before a play or a seek, and
+  once when the player gives up under way.
+- The audio session's category stays the host's to set: the package
+  configures nothing.
+- The example plays a voice note in a bubble and in the reader, an
+  MP3, a WAV from a file, and an Ogg with its MP3.
+
 ## 0.3.0 — 2026-09-30
 
 Phase R3, video (MEDIA_READER_PLAN.md):

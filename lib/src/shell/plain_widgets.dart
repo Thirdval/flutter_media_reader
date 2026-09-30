@@ -145,3 +145,147 @@ class const _Ring(final Color color, final Animation<double> turn)
   @override
   bool shouldRepaint(_Ring old) => old.color != color;
 }
+
+/// The glyphs the reader draws itself: no icon font is assumed.
+enum MediaReaderGlyph() {
+  play,
+  pause,
+  sound,
+  muted,
+}
+
+/// A round button with a drawn glyph: no icon font is assumed.
+class const MediaReaderGlyphButton({
+  required final MediaReaderGlyph glyph,
+  required final String label,
+  required final Color colour,
+  required final VoidCallback? onPressed,
+  super.key,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: label,
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: SizedBox.square(
+          dimension: 40,
+          child: CustomPaint(painter: _GlyphPainter(glyph, colour)),
+        ),
+      ),
+    ),
+  );
+}
+
+/// A button that is a short word: a speed.
+class const MediaReaderTextButton({
+  required final String text,
+  required final VoidCallback? onPressed,
+  super.key,
+}) extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    child: MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 40),
+          child: Center(
+            widthFactor: 1,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class const _GlyphPainter(final MediaReaderGlyph glyph, final Color colour)
+    extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final fill = Paint()..color = colour;
+    final stroke = Paint()
+      ..color = colour
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round;
+    final c = size.center(Offset.zero);
+    switch (glyph) {
+      case MediaReaderGlyph.play:
+        canvas.drawPath(
+          Path()
+            ..moveTo(c.dx - 5, c.dy - 8)
+            ..lineTo(c.dx + 8, c.dy)
+            ..lineTo(c.dx - 5, c.dy + 8)
+            ..close(),
+          fill,
+        );
+      case MediaReaderGlyph.pause:
+        canvas
+          ..drawRect(Rect.fromLTWH(c.dx - 6, c.dy - 7, 4, 14), fill)
+          ..drawRect(Rect.fromLTWH(c.dx + 2, c.dy - 7, 4, 14), fill);
+      case MediaReaderGlyph.sound || MediaReaderGlyph.muted:
+        // A speaker: a box and a cone.
+        canvas.drawPath(
+          Path()
+            ..moveTo(c.dx - 9, c.dy - 3)
+            ..lineTo(c.dx - 5, c.dy - 3)
+            ..lineTo(c.dx, c.dy - 7)
+            ..lineTo(c.dx, c.dy + 7)
+            ..lineTo(c.dx - 5, c.dy + 3)
+            ..lineTo(c.dx - 9, c.dy + 3)
+            ..close(),
+          fill,
+        );
+        if (glyph == MediaReaderGlyph.sound) {
+          canvas
+            ..drawArc(
+              Rect.fromCircle(center: c, radius: 5),
+              -0.8,
+              1.6,
+              false,
+              stroke,
+            )
+            ..drawArc(
+              Rect.fromCircle(center: c, radius: 9),
+              -0.8,
+              1.6,
+              false,
+              stroke,
+            );
+        } else {
+          canvas
+            ..drawLine(
+              Offset(c.dx + 4, c.dy - 4),
+              Offset(c.dx + 10, c.dy + 4),
+              stroke,
+            )
+            ..drawLine(
+              Offset(c.dx + 10, c.dy - 4),
+              Offset(c.dx + 4, c.dy + 4),
+              stroke,
+            );
+        }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_GlyphPainter old) =>
+      old.glyph != glyph || old.colour != colour;
+}

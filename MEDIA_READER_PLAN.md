@@ -81,7 +81,7 @@ host (Tendvine) lends:
 - R0 scaffold (built).
 - R1 the core and the shell (built).
 - R2–R6 one kind of file each: pictures (built), video (built), audio
-  with waveform, PDF, text/tables/archives.
+  with waveform (built), PDF, text/tables/archives.
 - R7 Office and HEIC through the host's derivatives.
 - R8 platform polish.
 - R9 Tendvine adopts it (in its own session, in four steps, the first
@@ -308,9 +308,14 @@ What R1 settled beyond the sketch it started from:
   so MR9 holds whatever the host passes.
 
 Also exported for hosts:
-- `MediaReaderAudioBar`: the inline player a chat shows for a voice
-  note;
-- `MediaReaderWaveform`: peaks, progress and drag-to-seek;
+- `MediaReaderAudioBar` (R4): the inline player a chat shows for a
+  voice note. It and the reader's page for the item with the same id
+  are one session;
+- `MediaReaderAudioCoordinator` (R4): one audio player for the app,
+  `shared` unless the host passes its own. `attach(id, source:)` gives
+  a file's session, a `MediaReaderPlayback`, to a host that draws its
+  own bar;
+- `MediaReaderWaveform` (R4): peaks, progress and drag-to-seek;
 - `MediaKind`: done in R0.
 
 ### 2.3 Engines by kind and platform
@@ -526,7 +531,7 @@ session the same day.
   picture in picture (R8, and it needs a decision: `video_player`
   offers none on iOS or Android).
 
-### R4 — Audio and waveform (M)
+### R4 — Audio and waveform (M) · built
 
 - **Engine:** `AudioEngine` (MR4), with one player at a time across
   the app (a coordinator the host can share).
@@ -543,6 +548,48 @@ session the same day.
   each platform in the matrix. A voice note inline and the same file
   in the reader share one player. The waveform tests cover peaks,
   none, and seeking.
+- **Built (2026-09-30):**
+  - `MediaReaderAudioEngine` on `just_audio` 0.10 for iOS, Android and
+    macOS, and on the `video_player` API for Windows and Linux, where
+    `fvp` plays a file that has no picture. That is MR4 as
+    recommended: the row still waits for the owner;
+  - what each player plays is a table in the engine: MP3, M4A, AAC,
+    WAV and FLAC everywhere; Ogg, Opus and AMR on Android and the
+    desktop; AIFF where AVPlayer or libmdk plays. An Ogg played as it
+    is on the Pixel, and through its MP3 on macOS;
+  - `MediaReaderAudioCoordinator`: one audio player for the app. A
+    file that starts stops the one that was playing, which keeps its
+    place. A video that starts in the reader stops the audio, and the
+    other way round: one sound at a time across both engines;
+  - `MediaReaderAudioBar`, the inline form. It and the reader's page
+    for the same file are one session. On both devices a voice note
+    was played and paused in its bubble, went on in the reader from
+    the same place on the one signature, was paused there, and went on
+    again in the bubble;
+  - `MediaReaderWaveform`: bars from the host's peaks, however many
+    there are, and a plain track without; a tap or a drag seeks; a
+    slider to a screen reader. The plain transport scrubs along it;
+  - a location that has run out is renewed before a play or a seek,
+    and once when the player gives up under way, as for video. On both
+    devices a URL was let run out under a paused MP3, and it went on
+    from the same place at a second signature;
+  - a location's headers go to the platform's player with the URL.
+    `just_audio`'s default sends them through a plain-HTTP proxy on
+    the device, which the host would have had to allow;
+  - 304 tests, with pretend players behind the engine's interface.
+- **The audio session is the host's.** `just_audio` pauses for an
+  interruption and lowers the sound where the system says to. The
+  session's category is one setting for the whole app, and a host may
+  record or make calls as well, so the package sets nothing (A4 in
+  §6). Nothing shows on the lock screen, and no background mode is
+  asked for.
+- **Not run:**
+  - iOS (the owner runs iOS builds). The silent switch and an
+    interruption by a call are the things to try there;
+  - an interruption on Android: the integration test cannot make one;
+  - Windows and Linux (no machine): audio through `fvp` has played
+    nothing yet.
+- **Left for later phases:** the keyboard for play and seek (R8).
 
 ### R5 — PDF (M)
 
@@ -645,8 +692,8 @@ In every step:
 | R0 | Scaffold: repo, pins, lints, CI, example for five platforms, `MediaKind`, plan, CLAUDE.md | ☑ built 2026-09-30 — analyze clean, 5 tests, example builds for macOS | initial commit | ☐ |
 | R1 | Core and shell: items, sources, policy, registry, pager, chrome slots, the card engine | ☑ built 2026-09-30 — analyze clean, 117 tests, example run on Android and macOS | `d2c235e`; tag `v0.1.0` when the owner asks | ☐ |
 | R2 | Pictures | ☑ built 2026-09-30 — analyze clean, 182 tests, example run on Android and macOS | `c6ba3f5`; tag `v0.2.0` when the owner asks | ☐ |
-| R3 | Video (`video_player` + `fvp`) | ☑ built 2026-09-30 — analyze clean, 225 tests, example run on Android and macOS | the 0.3.0 commit; tag `v0.3.0` when the owner asks | ☐ |
-| R4 | Audio and waveform, `MediaReaderAudioBar` | ☐ | | ☐ |
+| R3 | Video (`video_player` + `fvp`) | ☑ built 2026-09-30 — analyze clean, 225 tests, example run on Android and macOS | `ea38e36`; tag `v0.3.0` when the owner asks | ☐ |
+| R4 | Audio and waveform, `MediaReaderAudioBar` | ☑ built 2026-09-30 — analyze clean, 304 tests, example run on Android and macOS | the 0.4.0 commit; tag `v0.4.0` when the owner asks | ☐ |
 | R5 | PDF (`pdfrx`) | ☐ | | ☐ |
 | R6 | Text, Markdown, tables, archives | ☐ | | ☐ |
 | R7 | Derivatives: Office and HEIC through the host | ☐ | | ☐ |
@@ -662,6 +709,7 @@ In every step:
 | R1 | – | ✓ | ✓ | – | – |
 | R2 | – | ✓ | ✓ | – | – |
 | R3 | – | ✓ | ✓ | – | – |
+| R4 | – | ✓ | ✓ | – | – |
 
 Each ✓ is the example's integration test, run on a Pixel 10a with
 Android 17 and on macOS 27. iOS was not run: the owner runs iOS
@@ -675,6 +723,11 @@ builds. Windows and Linux were not run: no machine.
 - R3: eleven tests. An MP4 played, paused, sought and resumed by
   AVPlayer and by ExoPlayer; a URL renewed under a paused video; a
   WebM as it is on Android and through its MP4 on macOS.
+- R4: seventeen tests. A voice note (M4A) played, paused, sought along
+  its waveform and resumed; an MP3 from a signed URL and a WAV from a
+  file; an Ogg as it is on Android and through its MP3 on macOS; a
+  voice note shared between its bubble and the reader; a URL renewed
+  under a paused MP3; a video that starts stopping the voice note.
 
 Legend: ☐ not started · ◐ in progress · ☑ done (commit) · ✔ owner
 verified · ⊘ blocked (reason). Update the row in the same commit as
@@ -751,6 +804,11 @@ commit and a guide when each batch lands.
 - **A1:** R9a–R9d as above.
 - **A2:** capture peaks while recording voice notes.
 - **A3:** an account-scoped reader cache, cleared on sign-out.
+- **A4:** the audio session's category, set once by the app with
+  `audio_session` (R4). The reader sets nothing: the app records voice
+  notes as well, and the category is one setting for all of it. Left
+  at its default, an iPhone plays nothing while its silent switch is
+  on.
 
 ---
 

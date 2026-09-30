@@ -36,7 +36,31 @@ class const Sample({
   /// A bundled derivative, as a server would make: the JPEG of a HEIC.
   final String? preview,
   final String? previewType,
+
+  /// What a server computes of a sound at upload: its peaks, and its
+  /// length.
+  final List<double>? peaks,
+  final Duration? duration,
 });
+
+/// The voice note's name: the example also shows it inline, as a chat
+/// would.
+const String voiceNote = 'voice-1790232425618.m4a';
+
+/// The voice note's peaks: a hundred, each 0..1, as a server would send
+/// them.
+const List<double> _voicePeaks = [
+  0.13, 0.19, 0.19, 0.16, 0.07, 0.14, 0.41, 0.69, 0.92, 0.98, //
+  0.97, 0.82, 0.59, 0.30, 0.09, 0.19, 0.47, 0.74, 0.95, 0.99, //
+  0.95, 0.80, 0.52, 0.24, 0.07, 0.24, 0.50, 0.77, 0.96, 1.00, //
+  0.94, 0.76, 0.46, 0.20, 0.09, 0.28, 0.58, 0.84, 0.98, 0.99, //
+  0.90, 0.68, 0.41, 0.15, 0.12, 0.34, 0.62, 0.88, 0.97, 1.00, //
+  0.87, 0.64, 0.36, 0.12, 0.15, 0.39, 0.68, 0.91, 0.97, 0.97, //
+  0.84, 0.60, 0.30, 0.10, 0.19, 0.45, 0.74, 0.95, 1.00, 0.96, //
+  0.79, 0.54, 0.25, 0.07, 0.23, 0.50, 0.79, 0.94, 0.99, 0.94, //
+  0.75, 0.47, 0.20, 0.09, 0.28, 0.56, 0.82, 0.95, 1.00, 0.92, //
+  0.70, 0.37, 0.13, 0.07, 0.17, 0.25, 0.27, 0.26, 0.19, 0.09, //
+];
 
 /// The example's files. It grows with the plan: a kind gets a bundled
 /// sample when its engine arrives.
@@ -76,11 +100,30 @@ const List<Sample> samples = [
     preview: 'choir.mp4',
     previewType: 'video/mp4',
   ),
+  // A voice note uploaded under an MPEG-4 type: its name says it is
+  // audio. Its peaks and length come with it, as from a server.
   Sample(
-    name: 'voice-1790232425618.m4a',
+    name: voiceNote,
     contentType: 'video/mp4',
-    size: 181248,
-    bundled: false,
+    size: 39768,
+    peaks: _voicePeaks,
+    duration: Duration(seconds: 6),
+  ),
+  Sample(name: 'hymn.mp3', contentType: 'audio/mpeg', size: 64617),
+  Sample(
+    name: 'bell.wav',
+    contentType: 'audio/wav',
+    size: 132378,
+    via: SampleVia.file,
+  ),
+  // An Ogg plays as it is on Android, Windows and Linux; on an iPhone or
+  // a Mac the reader plays the MP3 a server would make of it.
+  Sample(
+    name: 'psalm.ogg',
+    contentType: 'audio/ogg',
+    size: 24245,
+    preview: 'psalm.mp3',
+    previewType: 'audio/mpeg',
   ),
   Sample(
     name: 'Rota_October.pdf',
@@ -164,6 +207,8 @@ class SampleFiles(
         },
         // What a host would show from a blurhash while the file comes.
         poster: (context) => const ColoredBox(color: Color(0xFF16302E)),
+        peaks: sample.peaks,
+        duration: sample.duration,
         data: const Shared(by: 'Ruth Adeyemi', where: '#harvest-supper'),
       ),
   ];

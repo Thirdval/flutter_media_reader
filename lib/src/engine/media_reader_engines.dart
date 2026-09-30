@@ -5,6 +5,7 @@ library;
 import 'package:flutter/foundation.dart';
 
 import '../item/media_reader_item.dart';
+import 'audio/audio_engine.dart';
 import 'media_reader_card_engine.dart';
 import 'media_reader_engine.dart';
 import 'picture/picture_engine.dart';
@@ -21,6 +22,7 @@ class const MediaReaderEngines(final List<MediaReaderEngine> _engines) {
   static const MediaReaderEngines standard = MediaReaderEngines([
     MediaReaderPictureEngine(),
     MediaReaderVideoEngine(),
+    MediaReaderAudioEngine(),
   ]);
 
   /// The file's card. It is not in the list: it is what [select] falls
@@ -36,7 +38,7 @@ class const MediaReaderEngines(final List<MediaReaderEngine> _engines) {
   /// file itself; failing that, the first that can show its preview;
   /// failing that, the card.
   MediaReaderShowing select(MediaReaderItem item, TargetPlatform platform) {
-    final preview = _asPreview(item);
+    final preview = item.asPreview;
     for (final shown in [item, ?preview]) {
       for (final engine in _engines) {
         if (engine.canShow(shown, platform)) {
@@ -46,23 +48,4 @@ class const MediaReaderEngines(final List<MediaReaderEngine> _engines) {
     }
     return (engine: card, item: item);
   }
-
-  /// [item]'s preview read as an item of its own: the preview's source,
-  /// type and kind, under the file's id and with the rest of what the
-  /// host said about the file.
-  static MediaReaderItem? _asPreview(MediaReaderItem item) =>
-      switch (item.preview) {
-        null => null,
-        final preview => MediaReaderItem(
-          id: item.id,
-          name: preview.name ?? item.name,
-          contentType: preview.contentType,
-          kind: preview.kind,
-          source: preview.source,
-          poster: item.poster,
-          peaks: item.peaks,
-          duration: item.duration,
-          data: item.data,
-        ),
-      };
 }

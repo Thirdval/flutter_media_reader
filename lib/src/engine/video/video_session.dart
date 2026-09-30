@@ -14,6 +14,7 @@ import '../../item/media_reader_item.dart';
 import '../../item/media_reader_source.dart';
 import '../../shell/media_reader_page.dart';
 import '../../shell/media_reader_playback.dart';
+import '../media_reader_sound.dart';
 
 /// Plays [item] for [page], through the `video_player` API.
 ///
@@ -55,6 +56,7 @@ final class MediaReaderVideoSession({
   /// Opens the video and plays it. A failure puts the card on the page.
   Future<void> start() async {
     _wantsPlaying = true;
+    _takeSound();
     opening.value = true;
     try {
       await _open(at: Duration.zero);
@@ -80,6 +82,7 @@ final class MediaReaderVideoSession({
   @override
   Future<void> play() async {
     _wantsPlaying = true;
+    _takeSound();
     if (player.value == null) return;
     try {
       await _refresh();
@@ -137,12 +140,18 @@ final class MediaReaderVideoSession({
 
   void dispose() {
     _disposed = true;
+    MediaReaderSound.release(this);
     player.value?.removeListener(_onPlayer);
     unawaited(player.value?.dispose());
     player.dispose();
     opening.dispose();
     _state.dispose();
   }
+
+  /// One sound at a time: a voice note that was playing stops, and this
+  /// video stops when one starts.
+  void _takeSound() =>
+      MediaReaderSound.take(this, quiet: () => unawaited(pause()));
 
   /// Opens a player at [location] (resolved when not given) and puts it
   /// in the last one's place, at [at] and as it was: speed, sound, and

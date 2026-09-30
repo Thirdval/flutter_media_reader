@@ -116,6 +116,7 @@ class const MediaReaderChromeSlots({
                 final playback => MediaReaderTransportBar(
                   playback: playback,
                   chrome: chrome,
+                  peaks: state.item.peaks,
                 ),
               },
             ),

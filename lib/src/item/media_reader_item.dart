@@ -47,6 +47,25 @@ class const MediaReaderItem({
   /// of [name] otherwise, and empty when neither says. An engine decides
   /// by it whether it shows the file on a platform.
   String get format => mediaFormatOf(contentType: contentType, fileName: name);
+
+  /// The preview read as an item of its own: the preview's source, type
+  /// and kind, under this file's id and with the rest of what the host
+  /// said about the file. Null without a preview. It is what an engine is
+  /// built with when it shows the preview.
+  MediaReaderItem? get asPreview => switch (preview) {
+    null => null,
+    final preview => MediaReaderItem(
+      id: id,
+      name: preview.name ?? name,
+      contentType: preview.contentType,
+      kind: preview.kind,
+      source: preview.source,
+      poster: poster,
+      peaks: peaks,
+      duration: duration,
+      data: data,
+    ),
+  };
 }
 
 /// A derivative the host makes of a file the reader cannot show as it is:

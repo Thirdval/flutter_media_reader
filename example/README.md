@@ -6,6 +6,10 @@ a host's chrome or the package's plain defaults, with export on or
 off. It grows with the plan: a kind gets a bundled sample when its
 engine arrives, and shows its card until then.
 
+Above the list a voice note stands in a bubble, as a chat shows one:
+play it there, open the same file in the list, and the reader goes on
+with the same player.
+
 The bundled samples are served by a small server inside the app, on
 the device's loopback: it signs URLs that expire, honours byte ranges
 and refuses what is expired, as a host's CDN would. The example needs

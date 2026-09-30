@@ -5,10 +5,10 @@ audio with waveforms, PDF, Office documents (through a PDF your server
 makes), text, tables and archives, on iOS, Android, macOS, Windows and
 Linux.
 
-> **Status: pre-release (phase R3).** The reader's shell, its host
-> contract, and the engines for pictures and video are in. The engines
-> for the other kinds arrive phase by phase; until then those files
-> show their card. Progress:
+> **Status: pre-release (phase R4).** The reader's shell, its host
+> contract, and the engines for pictures, video and audio are in. The
+> engines for the other kinds arrive phase by phase; until then those
+> files show their card. Progress:
 > [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
 
 ## Principles
@@ -87,7 +87,8 @@ and each one paged to, never a neighbour being prepared.
 
 A `MediaReaderItem` describes a file. Its kind is read from its
 content type and name by `MediaKind.of`; pass `kind` when your server
-already knows it.
+already knows it. What your server knows of a sound goes with it: its
+`peaks` for the waveform, and its `duration` (see Audio).
 
 | Source | For |
 | --- | --- |
@@ -168,7 +169,7 @@ the page (`playback`), and `close`.
 | `bottomStart` | Your actions: reply, forward | Empty |
 | `bottomEnd` | More | Empty |
 | `contextPill` | "Shared in #channel" | Empty |
-| `controls` | The transport for what plays | A bar: play, scrubber, time, speed, mute |
+| `controls` | The transport for what plays | A bar: play, a scrubber or the waveform, time, speed, mute |
 | `status` | The engine's status: "1 of 15", a time | A pill, while there is one |
 | `cardActions` | Your actions on a file's card: save, share | Empty |
 
@@ -354,6 +355,98 @@ where `fvp` registers itself as `video_player`'s implementation.
 Windows and Linux: libmdk is linked into the iOS, Android and macOS
 builds as well.
 
+## Audio
+
+`MediaReaderAudioEngine` plays through
+[`just_audio`](https://pub.dev/packages/just_audio) on iOS, Android and
+macOS, and through the `video_player` API on Windows and Linux, where
+`fvp` plays a file that has no picture.
+
+| Format | Where |
+| --- | --- |
+| MP3, M4A, M4B, AAC, WAV, FLAC | Every platform |
+| AIFF | iOS, macOS, Windows, Linux |
+| Ogg, Opus, WebM audio, AMR | Android, Windows, Linux |
+| WMA | Windows, Linux |
+| A format the platform does not play | Through its `preview`, the MP3 or M4A your server makes; else the card |
+
+- **One sound at a time.** A `MediaReaderAudioCoordinator` gives the
+  app's one audio player to one file at a time: starting a file stops
+  the one that was playing, which keeps its place. A video that starts
+  in the reader stops the audio, and audio that starts stops the
+  video. The reader and the inline bar use
+  `MediaReaderAudioCoordinator.shared` unless you pass your own.
+- **In the reader.** A neighbour asks for nothing. A file plays when
+  its page comes on screen, stops when the page is left, and goes on
+  when the page is back if it was playing. The page shows the file's
+  name and length over its `poster`; the transport is the chrome's.
+- **The waveform.** Give the item the `peaks` your server computes,
+  each from 0 to 1, and the scrubber is the sound's waveform: as many
+  bars as fit, each the loudest of the peaks it stands for, the part
+  played in full colour. A tap or a drag along it seeks, and to a
+  screen reader it is a slider. Without peaks it is a plain track. The
+  item's `duration` is shown until the player knows its own.
+- **A location that runs out** is renewed as a video's is: before a
+  play or a seek, and once when the player gives up under way.
+- **Sources.** A signed URL or a file. Headers go to the platform's
+  player with the URL. Audio in memory has no player, and shows its
+  card.
+
+### A voice note in a chat
+
+`MediaReaderAudioBar` is the inline player: play and pause, the
+waveform, the time, the speed.
+
+```dart
+MediaReaderAudioBar(
+  item: MediaReaderItem(
+    id: note.id,
+    name: note.name,
+    source: MediaReaderSource.remote(() => resolve(note)),
+    peaks: note.peaks,
+    duration: note.duration,
+  ),
+  color: bubble.foreground,
+  strings: MediaReaderStrings(play: l10n.play, pause: l10n.pause),
+)
+```
+
+- **One player with the reader.** The bar and the reader's page for
+  the item with the same `id` are one session: a note that plays in
+  its bubble goes on playing when it is opened in the reader, either
+  place's controls drive it, and your `resolve` is asked once between
+  them.
+- **Nothing until it is played.** A bar shows the length you gave,
+  and your `resolve` is not called until the note is played.
+- **Scrolled out of sight,** a note that is playing plays on to its
+  end; `stopsWhenRemoved: true` stops it with its bubble. Call
+  `MediaReaderAudioCoordinator.shared.stop()` when the conversation is
+  left.
+- **Failing.** A note that cannot be played goes back to its play
+  button, and `onFailure` is told what your `resolve` or the player
+  threw: you say why, in your own way.
+- **Your own bar.** `coordinator.attach(id, source: …)` gives the
+  file's session, a `MediaReaderPlayback` with a `failure` to show;
+  `MediaReaderWaveform` draws the peaks and seeks. Let go with
+  `detach`.
+
+### The audio session
+
+`just_audio` pauses the file for a call or another app's sound, and
+lowers it where the system says to. The session's category is your
+app's to choose, and the reader sets nothing: it is one setting for
+the whole app, and your app may record or make calls as well. Set it
+once at start with [`audio_session`](https://pub.dev/packages/audio_session),
+or an iPhone plays nothing while its silent switch is on:
+
+```dart
+final session = await AudioSession.instance;
+await session.configure(const AudioSessionConfiguration.speech());
+```
+
+The reader shows nothing on the lock screen and asks for no
+background mode: a file plays while your app is in front.
+
 ## Engines by kind
 
 Every engine runs on all five platforms.
@@ -362,8 +455,8 @@ Every engine runs on all five platforms.
 | --- | --- | --- |
 | Pictures | Flutter `Image` + `InteractiveViewer` | In |
 | Video | `video_player` (AVPlayer, ExoPlayer) with [`fvp`](https://pub.dev/packages/fvp) on Windows and Linux | In |
-| Audio | [`just_audio`](https://pub.dev/packages/just_audio); `fvp` on Windows and Linux | Planned |
-| Waveform | drawn from peaks your server computes | Planned |
+| Audio | [`just_audio`](https://pub.dev/packages/just_audio); `fvp` on Windows and Linux | In |
+| Waveform | drawn from peaks your server computes | In |
 | PDF | [`pdfrx`](https://pub.dev/packages/pdfrx) (PDFium) | Planned |
 | Office | your server's PDF, through `pdfrx` | Planned |
 | Text, code, JSON, Markdown | Flutter text, `flutter_markdown_plus` | Planned |

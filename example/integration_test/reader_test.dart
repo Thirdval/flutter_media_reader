@@ -30,6 +30,9 @@ void main() {
       ..expireNext.clear()
       ..validFor = const Duration(minutes: 15);
   });
+  // A voice note that plays on in its bubble does not play into the next
+  // test.
+  tearDown(MediaReaderAudioCoordinator.shared.stop);
 
   Future<void> pumpExample(WidgetTester tester) async {
     await tester.pumpWidget(ExampleApp(files: files));
@@ -93,6 +96,39 @@ void main() {
     await tester.drag(find.byType(PageView), Offset(-width * 0.6, 0));
     await tester.pump(const Duration(milliseconds: 600));
   }
+
+  /// What [matching] finds in the reader, and not in the page under it.
+  Finder inReader(Finder matching) =>
+      find.descendant(of: find.byType(MediaReaderView), matching: matching);
+
+  /// Whether the reader's transport shows the control called [label].
+  bool shows(String label) =>
+      inReader(find.bySemanticsLabel(label)).evaluate().isNotEmpty;
+
+  /// How far the reader's transport shows the file has played; null while
+  /// there is no transport.
+  Duration? position(WidgetTester tester) => tester
+      .widgetList<MediaReaderWaveform>(
+        inReader(find.byType(MediaReaderWaveform)),
+      )
+      .firstOrNull
+      ?.position;
+
+  /// The same in whole seconds, as the transport writes it.
+  int? played(WidgetTester tester) => position(tester)?.inSeconds;
+
+  Future<void> tapControl(WidgetTester tester, String label) =>
+      tester.tap(inReader(find.bySemanticsLabel(label)));
+
+  /// Taps the transport's track at [fraction] of its length.
+  Future<void> seekTo(WidgetTester tester, double fraction) async {
+    final track = tester.getRect(inReader(find.byType(MediaReaderWaveform)));
+    await tester.tapAt(track.centerLeft + Offset(track.width * fraction, 0));
+  }
+
+  final apple =
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
 
   Future<void> doubleTap(WidgetTester tester) async {
     final centre = tester.getCenter(find.byType(InteractiveViewer));
@@ -165,9 +201,6 @@ void main() {
       await open(tester, 'IMG_0042.heic');
       await pumpUntil(tester, () => picture(tester) != null);
 
-      final apple =
-          defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.macOS;
       expect(
         files.server.served.map((file) => file.name),
         contains(apple ? 'IMG_0042.heic' : 'IMG_0042.jpg'),
@@ -194,27 +227,6 @@ void main() {
   });
 
   group('video', () {
-    /// The time the transport shows as played, in seconds; null while
-    /// there is no transport.
-    int? played(WidgetTester tester) {
-      final texts = tester.widgetList<Text>(
-        find.descendant(
-          of: find.byType(MediaReaderView),
-          matching: find.byType(Text),
-        ),
-      );
-      for (final text in texts) {
-        final time = RegExp(r'^(\d+):(\d\d)$').firstMatch(text.data ?? '');
-        if (time != null) {
-          return int.parse(time.group(1)!) * 60 + int.parse(time.group(2)!);
-        }
-      }
-      return null;
-    }
-
-    bool shows(String label) =>
-        find.bySemanticsLabel(label).evaluate().isNotEmpty;
-
     testWidgets('a video plays from a signed URL, pauses, seeks and goes '
         'on', (tester) async {
       final semantics = tester.ensureSemantics();
@@ -224,18 +236,17 @@ void main() {
       await pumpUntil(tester, () => (played(tester) ?? 0) >= 1);
       expect(shows('Pause'), isTrue);
 
-      await tester.tap(find.bySemanticsLabel('Pause'));
+      await tapControl(tester, 'Pause');
       await pumpUntil(tester, () => shows('Play'));
       final pausedAt = played(tester)!;
       await tester.pump(const Duration(seconds: 1));
       expect(played(tester), pausedAt);
 
       // Three quarters along a video of eight seconds.
-      final track = tester.getRect(find.bySemanticsLabel('Position'));
-      await tester.tapAt(track.centerLeft + Offset(track.width * 0.75, 0));
+      await seekTo(tester, 0.75);
       await pumpUntil(tester, () => played(tester) == 6);
 
-      await tester.tap(find.bySemanticsLabel('Play'));
+      await tapControl(tester, 'Play');
       await pumpUntil(tester, () => (played(tester) ?? 0) >= 7);
 
       // The platform's player fetched the file from the server. AVPlayer
@@ -245,8 +256,7 @@ void main() {
         (file) => file.name == 'baptism.mp4',
       );
       expect(requests, isNotEmpty);
-      if (defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.macOS) {
+      if (apple) {
         expect(requests.where((file) => file.range != null), isNotEmpty);
       }
       // The video after it was not asked for: it is a neighbour.
@@ -265,12 +275,12 @@ void main() {
 
       await open(tester, 'baptism.mp4');
       await pumpUntil(tester, () => (played(tester) ?? 0) >= 4);
-      await tester.tap(find.bySemanticsLabel('Pause'));
+      await tapControl(tester, 'Pause');
       await pumpUntil(tester, () => shows('Play'));
       final pausedAt = played(tester)!;
       expect(files.server.signed['baptism.mp4'], 1);
 
-      await tester.tap(find.bySemanticsLabel('Play'));
+      await tapControl(tester, 'Play');
       await pumpUntil(tester, () => files.server.signed['baptism.mp4'] == 2);
       await pumpUntil(
         tester,
@@ -290,9 +300,6 @@ void main() {
       await pumpUntil(tester, () => (played(tester) ?? 0) >= 1);
       await swipeToNext(tester);
 
-      final apple =
-          defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.macOS;
       final expected = apple ? 'choir.mp4' : 'choir.webm';
       await pumpUntil(
         tester,
@@ -308,6 +315,209 @@ void main() {
     });
   });
 
+  group('audio', () {
+    /// What [matching] finds in the voice note's bubble.
+    Finder inBubble(Finder matching) => find.descendant(
+      of: find.byType(MediaReaderAudioBar),
+      matching: matching,
+    );
+
+    /// How far the bubble shows the voice note has played.
+    Duration bubbleAt(WidgetTester tester) => tester
+        .widget<MediaReaderWaveform>(inBubble(find.byType(MediaReaderWaveform)))
+        .position;
+
+    testWidgets('a voice note plays from a signed URL, pauses, seeks along '
+        'its waveform and goes on', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpExample(tester);
+
+      await open(tester, voiceNote);
+      await pumpUntil(tester, () => (played(tester) ?? 0) >= 1);
+      expect(shows('Pause'), isTrue);
+      // The transport draws the peaks the host gave.
+      expect(
+        tester
+            .widget<MediaReaderWaveform>(
+              inReader(find.byType(MediaReaderWaveform)),
+            )
+            .peaks,
+        hasLength(100),
+      );
+
+      await tapControl(tester, 'Pause');
+      await pumpUntil(tester, () => shows('Play'));
+      final pausedAt = position(tester)!;
+      await tester.pump(const Duration(seconds: 1));
+      expect(position(tester), pausedAt);
+
+      // Seven tenths along a note of six seconds.
+      await seekTo(tester, 0.7);
+      await pumpUntil(tester, () => played(tester) == 4);
+
+      await tapControl(tester, 'Play');
+      await pumpUntil(tester, () => (played(tester) ?? 0) >= 5);
+
+      // One signature for all of it, and none for the file after it.
+      expect(files.server.signed[voiceNote], 1);
+      expect(files.server.signed['hymn.mp3'], isNull);
+      expect(find.text('Try again'), findsNothing);
+      semantics.dispose();
+    });
+
+    testWidgets('an MP3 plays from a signed URL, and a WAV from a file', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await pumpExample(tester);
+
+      await open(tester, 'hymn.mp3');
+      await pumpUntil(
+        tester,
+        () => shows('Pause') && (played(tester) ?? 0) >= 1,
+      );
+      expect(
+        files.server.served.map((file) => file.name),
+        contains('hymn.mp3'),
+      );
+
+      await swipeToNext(tester);
+      await pumpUntil(
+        tester,
+        () => shows('Pause') && position(tester)! > Duration.zero,
+      );
+
+      // The hymn stopped when its page was left, and the bell came from
+      // the device: the server was not asked for it.
+      expect(find.text('bell.wav'), findsWidgets);
+      expect(
+        files.server.served.map((file) => file.name),
+        isNot(contains('bell.wav')),
+      );
+      expect(find.text('Try again'), findsNothing);
+      semantics.dispose();
+    });
+
+    testWidgets('an Ogg plays as it is where the player plays it, through '
+        'its MP3 elsewhere', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpExample(tester);
+
+      await open(tester, 'psalm.ogg');
+      final expected = apple ? 'psalm.mp3' : 'psalm.ogg';
+      await pumpUntil(
+        tester,
+        () => files.server.served.any((file) => file.name == expected),
+      );
+      await pumpUntil(
+        tester,
+        () => shows('Pause') && (played(tester) ?? 0) >= 1,
+      );
+
+      expect(files.server.signed[apple ? 'psalm.ogg' : 'psalm.mp3'], isNull);
+      expect(find.text('Try again'), findsNothing);
+      semantics.dispose();
+    });
+
+    testWidgets('a voice note in its bubble and in the reader share one '
+        'player', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpExample(tester);
+
+      // Played and paused where it stands in the chat.
+      await tester.tap(inBubble(find.bySemanticsLabel('Play')));
+      await pumpUntil(
+        tester,
+        () => bubbleAt(tester) >= const Duration(seconds: 1),
+      );
+      await tester.tap(inBubble(find.bySemanticsLabel('Pause')));
+      await pumpUntil(
+        tester,
+        () => inBubble(find.bySemanticsLabel('Play')).evaluate().isNotEmpty,
+      );
+      final inChat = bubbleAt(tester);
+      expect(files.server.signed[voiceNote], 1);
+
+      // Opened in the reader, it goes on from there, and the host is not
+      // asked again.
+      await open(tester, voiceNote);
+      await pumpUntil(tester, () => shows('Pause'));
+      expect(position(tester), greaterThanOrEqualTo(inChat));
+      expect(files.server.signed[voiceNote], 1);
+
+      await tapControl(tester, 'Pause');
+      await pumpUntil(tester, () => shows('Play'));
+      final inTheReader = position(tester)!;
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pumpAndSettle();
+      expect(find.byType(MediaReaderView), findsNothing);
+
+      // The bubble shows the note where the reader left it, and plays it
+      // on.
+      expect(bubbleAt(tester), inTheReader);
+      await tester.tap(inBubble(find.bySemanticsLabel('Play')));
+      await pumpUntil(tester, () => bubbleAt(tester) > inTheReader);
+
+      expect(files.server.signed[voiceNote], 1);
+      semantics.dispose();
+    });
+
+    testWidgets('a URL that runs out while the file is paused is renewed, '
+        'and the file goes on where it was', (tester) async {
+      final semantics = tester.ensureSemantics();
+      // Stale three seconds after it is signed, as for the video.
+      files.server.validFor = const Duration(seconds: 33);
+      await pumpExample(tester);
+
+      await open(tester, 'hymn.mp3');
+      await pumpUntil(tester, () => (played(tester) ?? 0) >= 4);
+      await tapControl(tester, 'Pause');
+      await pumpUntil(tester, () => shows('Play'));
+      final pausedAt = position(tester)!;
+      expect(files.server.signed['hymn.mp3'], 1);
+
+      await tapControl(tester, 'Play');
+      await pumpUntil(tester, () => files.server.signed['hymn.mp3'] == 2);
+      await pumpUntil(
+        tester,
+        () => shows('Pause') && position(tester)! > pausedAt,
+      );
+
+      expect(find.text('Try again'), findsNothing);
+      semantics.dispose();
+    });
+
+    testWidgets('a video that starts stops the voice note that plays', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await pumpExample(tester);
+
+      await tester.tap(inBubble(find.bySemanticsLabel('Play')));
+      await pumpUntil(
+        tester,
+        () => bubbleAt(tester) >= const Duration(seconds: 1),
+      );
+
+      await open(tester, 'baptism.mp4');
+      await pumpUntil(
+        tester,
+        () => shows('Pause') && (played(tester) ?? 0) >= 1,
+      );
+
+      // The note stopped where it was, short of its end. The bubble is
+      // under the reader, where a screen reader does not look: the note
+      // is asked of the coordinator.
+      final note = MediaReaderAudioCoordinator.shared.active.value!.state.value;
+      expect(note.playing, isFalse);
+      expect(note.ended, isFalse);
+      expect(note.position, bubbleAt(tester));
+      expect(note.position, lessThan(const Duration(seconds: 6)));
+      semantics.dispose();
+    });
+  });
+
   group('the shell', () {
     testWidgets('a file without an engine opens as its card, pages, and '
         'closes', (tester) async {
@@ -315,9 +525,12 @@ void main() {
 
       await open(tester, 'Rota_October.pdf');
 
+      // The card after it has the same actions, and a phone's width puts
+      // that page a hair's breadth on screen for a finder: only what can
+      // be tapped is counted.
       expect(find.text('PDF · 258 KB'), findsOneWidget);
-      expect(find.text('Save to device'), findsOneWidget);
-      expect(find.text('Share'), findsOneWidget);
+      expect(find.text('Save to device').hitTestable(), findsOneWidget);
+      expect(find.text('Share').hitTestable(), findsOneWidget);
 
       await swipeToNext(tester);
       expect(find.text('Document · 57 KB'), findsOneWidget);

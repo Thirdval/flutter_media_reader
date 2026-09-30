@@ -113,7 +113,7 @@ void main() {
     ) async {
       final semantics = tester.ensureSemantics();
       final playback = await pumpBar(tester);
-      final scrubber = tester.getSemantics(find.byType(MediaReaderScrubber));
+      final scrubber = tester.getSemantics(find.byType(MediaReaderWaveform));
 
       expect(
         scrubber,
@@ -155,7 +155,7 @@ void main() {
       );
 
       expect(
-        tester.getSemantics(find.byType(MediaReaderScrubber)),
+        tester.getSemantics(find.byType(MediaReaderWaveform)),
         isSemantics(
           label: 'Position',
           value: '1:58',
@@ -173,7 +173,7 @@ void main() {
       tester,
     ) async {
       final playback = await pumpBar(tester);
-      final track = tester.getRect(find.byType(MediaReaderScrubber));
+      final track = tester.getRect(find.byType(MediaReaderWaveform));
 
       final gesture = await tester.startGesture(
         track.centerLeft + Offset(track.width * 0.25, 0),

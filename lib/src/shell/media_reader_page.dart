@@ -3,6 +3,7 @@
 library;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../item/media_reader_item.dart';
 import '../item/media_reader_policy.dart';
@@ -39,6 +40,7 @@ final class MediaReaderPage({
         _ => null,
       };
   final ValueNotifier<bool> _current = ValueNotifier(current);
+  bool _wantedCurrent = current;
   final ValueNotifier<bool> _chromeVisible =
       chromeVisible ?? ValueNotifier(true);
   final bool _ownsChromeVisible = chromeVisible == null;
@@ -182,7 +184,22 @@ final class const MediaReaderPageBinding(final MediaReaderPage page) {
   }
 
   /// Whether the page is the one on screen.
+  ///
+  /// The shell learns it while it builds, and an engine's answer (a
+  /// pause, a play) changes what other widgets show. So the page is told
+  /// once the frame is built: a listener of `isCurrent` may set state.
   set current(bool value) {
-    if (!page._disposed) page._current.value = value;
+    page._wantedCurrent = value;
+    if (page._disposed || page._current.value == value) return;
+    final building =
+        SchedulerBinding.instance.schedulerPhase ==
+        SchedulerPhase.persistentCallbacks;
+    if (!building) {
+      page._current.value = value;
+      return;
+    }
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (!page._disposed) page._current.value = page._wantedCurrent;
+    });
   }
 }

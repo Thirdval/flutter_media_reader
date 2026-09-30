@@ -238,7 +238,7 @@ void main() {
       tester,
     ) async {
       final player = await pumpPlaying(tester);
-      final track = tester.getRect(find.byType(MediaReaderScrubber));
+      final track = tester.getRect(find.byType(MediaReaderWaveform));
 
       await tester.tapAt(track.centerLeft + Offset(track.width * 0.5, 0));
       await tester.pumpAndSettle();
@@ -364,7 +364,7 @@ void main() {
       final host = shortLived();
       await pumpReader(tester, items: [video('a.mp4', host)]);
       await tester.pumpAndSettle();
-      final track = tester.getRect(find.byType(MediaReaderScrubber));
+      final track = tester.getRect(find.byType(MediaReaderWaveform));
 
       await letItRunOut(tester);
       await tester.tapAt(track.center);
