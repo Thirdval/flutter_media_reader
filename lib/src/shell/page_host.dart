@@ -60,6 +60,7 @@ class _MediaReaderPageHostState() extends State<MediaReaderPageHost> {
       count: widget.count,
       policy: widget.policy,
       chrome: widget.chrome,
+      engines: widget.engines,
       current: widget.current,
       resolver: _resolver(),
       chromeVisible: widget.chromeVisible,

@@ -5,7 +5,6 @@ import 'dart:typed_data';
 import 'package:flutter_media_reader/flutter_media_reader.dart';
 import 'package:flutter_media_reader/src/io/media_reader_block_file.dart';
 import 'package:flutter_media_reader/src/io/media_reader_block_memory.dart';
-import 'package:flutter_media_reader/src/io/media_reader_blocks.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fakes.dart';

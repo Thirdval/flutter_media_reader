@@ -667,6 +667,122 @@ void main() {
     });
   });
 
+  group('text, tables and archives', () {
+    bool shows(String text) => find.text(text).evaluate().isNotEmpty;
+    bool showsPart(String text) =>
+        find.textContaining(text).evaluate().isNotEmpty;
+
+    testWidgets('a text opens from a signed URL, and its search finds a '
+        'line', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpExample(tester);
+      await open(tester, 'Sermon notes.txt');
+      await pumpUntil(tester, () => showsPart('Notes for Sunday'));
+
+      await tester.tap(inReader(find.bySemanticsLabel('Search')));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.enterText(inReader(find.byType(EditableText)), 'harvest');
+      // Five times, in any case.
+      await pumpUntil(tester, () => shows('1 of 5'));
+
+      expect(find.text('Try again'), findsNothing);
+      semantics.dispose();
+    });
+
+    testWidgets('a log of thirty thousand lines opens from a file, and '
+        'goes to its end', (tester) async {
+      await pumpExample(tester);
+      await open(tester, 'sync.log');
+      await pumpUntil(tester, () => showsPart('2026-10-01'));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.end);
+      await pumpUntil(tester, () => !showsPart('2026-10-01 00:00'));
+
+      expect(
+        files.server.served.map((file) => file.name),
+        isNot(contains('sync.log')),
+      );
+      expect(find.text('Try again'), findsNothing);
+    });
+
+    testWidgets('a table of a hundred thousand rows opens, with its '
+        'header row, and goes to its end', (tester) async {
+      await pumpExample(tester);
+      await open(tester, 'attendance.csv');
+      await pumpUntil(tester, () => shows('100,001 rows'));
+      expect(showsPart('attendance'), isTrue);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.end);
+      await pumpUntil(tester, () => showsPart('100000'));
+
+      // The header stays.
+      expect(showsPart('attendance'), isTrue);
+      expect(find.text('Try again'), findsNothing);
+    });
+
+    testWidgets('a Markdown file is laid out, and its link is handed to '
+        'the host', (tester) async {
+      await pumpExample(tester);
+      await open(tester, 'README.md');
+      await pumpUntil(tester, () => shows('Harvest supper'));
+      expect(showsPart('Doors open'), isTrue);
+
+      // The paragraph with the link is brought clear of the chrome's
+      // bottom row, and tapped on its link: after "The full ".
+      for (var i = 0; i < 6; i++) {
+        await tester.sendKeyEvent(LogicalKeyboardKey.arrowDown);
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      final paragraph = find.textContaining('rota for October');
+      await tester.tapAt(tester.getTopLeft(paragraph) + const Offset(110, 10));
+      await pumpUntil(tester, () => showsPart('https://tendvine.example/rota'));
+
+      await tester.tap(find.text('Close'));
+      await tester.pump(const Duration(milliseconds: 400));
+    });
+
+    testWidgets('JSON is laid out to be read', (tester) async {
+      await pumpExample(tester);
+      await open(tester, 'settings.json');
+
+      await pumpUntil(tester, () => showsPart('"community": "Ignite Church",'));
+    });
+
+    testWidgets('a zip lists its folders and files, and opens a picture in '
+        'a reader over the reader', (tester) async {
+      await pumpExample(tester);
+      await open(tester, 'photos.zip');
+      await pumpUntil(tester, () => shows('5 files'));
+      expect(shows('hall/'), isTrue);
+      expect(shows('more.zip'), isTrue);
+
+      await tester.tap(find.text('hall/'));
+      await pumpUntil(tester, () => shows('banner.png'));
+      await tester.tap(find.text('banner.png'));
+      await pumpUntil(
+        tester,
+        () => find.byType(MediaReaderView).evaluate().length == 2,
+      );
+      await pumpUntil(tester, () => picture(tester)?.width == 640);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await pumpUntil(
+        tester,
+        () => find.byType(MediaReaderView).evaluate().length == 1,
+      );
+      expect(shows('banner.png'), isTrue);
+    });
+
+    testWidgets('a gzipped tar lists its files', (tester) async {
+      await pumpExample(tester);
+      await open(tester, 'logs.tar.gz');
+
+      await pumpUntil(tester, () => shows('logs/'));
+      await tester.tap(find.text('logs/'));
+      await pumpUntil(tester, () => shows('sync-2.log'));
+    });
+  });
+
   group('the shell', () {
     testWidgets('a file without an engine opens as its card, pages, and '
         'closes', (tester) async {
@@ -682,7 +798,7 @@ void main() {
       expect(find.text('Share').hitTestable(), findsOneWidget);
 
       await swipeToNext(tester);
-      expect(find.text('Text · 4 KB'), findsOneWidget);
+      expect(find.text('File · 7 MB'), findsOneWidget);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();

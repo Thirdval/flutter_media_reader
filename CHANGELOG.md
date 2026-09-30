@@ -1,3 +1,31 @@
+## 0.6.0 — 2026-09-30
+
+Phase R6, text, Markdown, tables and archives (MEDIA_READER_PLAN.md):
+
+- `MediaReaderTextEngine`: text, logs, code, JSON and XML, a line at a
+  time, with the lines on screen and no others built. UTF-8, UTF-16
+  and Windows-1252. Prose in the reader's face; the rest in a face of
+  equal widths, in rows of one height, wrapped at the column or not.
+  JSON and XML laid out to be read. Search through every line.
+- `MediaReaderMarkdownEngine` on `flutter_markdown_plus`: links to the
+  host, images never fetched, the file as written on a toggle.
+- `MediaReaderTableEngine` on `two_dimensional_scrollables`: CSV and
+  TSV with the header row pinned, the delimiter from the rows, cells
+  built where they are on screen, a search.
+- `MediaReaderArchiveEngine`: zip, tar and gzip listed with their
+  sizes, folders opened in place, and an entry opened through the
+  registry in a reader over this one. A zip is read from its end and a
+  tar from its headers, so a remote archive is listed after a few
+  ranges.
+- Selected text has a menu of Copy and Select all; Select all takes
+  the whole file; what is copied from several lines has its breaks.
+- `MediaReaderToggle` and `MediaReaderDocumentState.toggles`: a
+  document's choices, for the chrome's controls.
+- `MediaReaderByteLoader`, a file's bytes as they come, and
+  `MediaReaderPage.engines`, for an engine that shows another file.
+- The example shows a sermon, a README, JSON, a log of thirty thousand
+  lines, a table of a hundred thousand rows, a zip and a gzipped tar.
+
 ## 0.5.0 — 2026-09-30
 
 Phase R5, PDF (MEDIA_READER_PLAN.md):

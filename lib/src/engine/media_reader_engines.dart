@@ -5,11 +5,15 @@ library;
 import 'package:flutter/foundation.dart';
 
 import '../item/media_reader_item.dart';
+import 'archive/archive_engine.dart';
 import 'audio/audio_engine.dart';
+import 'markdown/markdown_engine.dart';
 import 'media_reader_card_engine.dart';
 import 'media_reader_engine.dart';
 import 'pdf/pdf_engine.dart';
 import 'picture/picture_engine.dart';
+import 'table/table_engine.dart';
+import 'text/text_engine.dart';
 import 'video/video_engine.dart';
 
 /// What the registry chose for a file: the engine, and the item it is
@@ -25,6 +29,10 @@ class const MediaReaderEngines(final List<MediaReaderEngine> _engines) {
     MediaReaderVideoEngine(),
     MediaReaderAudioEngine(),
     MediaReaderPdfEngine(),
+    MediaReaderTextEngine(),
+    MediaReaderMarkdownEngine(),
+    MediaReaderTableEngine(),
+    MediaReaderArchiveEngine(),
   ]);
 
   /// The file's card. It is not in the list: it is what [select] falls

@@ -47,6 +47,7 @@ class const MediaReaderTextMenu({
                     constraints: const BoxConstraints(minHeight: 40),
                     child: Center(
                       widthFactor: 1,
+                      heightFactor: 1,
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         child: Text(action.label),

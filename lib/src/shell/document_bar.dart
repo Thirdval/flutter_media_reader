@@ -98,22 +98,39 @@ class _MediaReaderDocumentBarState() extends State<MediaReaderDocumentBar> {
     final colour = widget.chrome.foreground;
     return Center(
       child: _bar(
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            MediaReaderGlyphButton(
-              glyph: MediaReaderGlyph.pages,
-              label: strings.pages,
-              colour: colour,
-              onPressed: () => _toggle(_Showing.pages),
-            ),
-            MediaReaderGlyphButton(
-              glyph: MediaReaderGlyph.search,
-              label: strings.search,
-              colour: colour,
-              onPressed: () => _toggle(_Showing.search),
-            ),
-          ],
+        child: ValueListenableBuilder(
+          valueListenable: _document.state,
+          builder: (context, state, _) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // A text has no pages to show in a strip.
+              if (state.pageCount > 0)
+                MediaReaderGlyphButton(
+                  glyph: MediaReaderGlyph.pages,
+                  label: strings.pages,
+                  colour: colour,
+                  onPressed: () => _toggle(_Showing.pages),
+                ),
+              if (state.searchable)
+                MediaReaderGlyphButton(
+                  glyph: MediaReaderGlyph.search,
+                  label: strings.search,
+                  colour: colour,
+                  onPressed: () => _toggle(_Showing.search),
+                ),
+              for (final toggle in state.toggles)
+                Semantics(
+                  toggled: toggle.on,
+                  child: Opacity(
+                    opacity: toggle.on ? 1 : 0.5,
+                    child: MediaReaderTextButton(
+                      text: toggle.label,
+                      onPressed: () => toggle.onChanged(!toggle.on),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

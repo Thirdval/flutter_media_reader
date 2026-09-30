@@ -70,11 +70,47 @@ class const MediaReaderStrings({
   final String copy = 'Copy',
   final String selectAll = 'Select all',
 
+  /// A text's choices: its long lines wrapped to the width, and a JSON,
+  /// XML or Markdown file laid out rather than as it is written.
+  final String wrap = 'Wrap',
+  final String formatted = 'Formatted',
+
+  /// Under a text too long to show all of: "The first 32 MB of 120 MB
+  /// are shown."
+  final String Function(String shown, String total) cutShort = _cutShort,
+
+  /// A table's status: "1,234 rows".
+  final String Function(int count) rows = _rows,
+
+  /// An archive's status: "12 files"; and the row that goes up out of
+  /// one of its folders.
+  final String Function(int count) files = _files,
+  final String up = 'Back',
+
   /// On the card, when a file asks for a password the host did not give.
   final String locked = 'This file is protected by a password.',
 });
 
 String _pageNumber(int number) => 'Page $number';
+
+String _cutShort(String shown, String total) =>
+    'The first $shown of $total are shown.';
+
+String _rows(int count) => '${_grouped(count)} ${count == 1 ? 'row' : 'rows'}';
+
+String _files(int count) =>
+    '${_grouped(count)} ${count == 1 ? 'file' : 'files'}';
+
+/// "1,234".
+String _grouped(int count) {
+  final digits = '$count';
+  final grouped = StringBuffer();
+  for (var i = 0; i < digits.length; i++) {
+    if (i > 0 && (digits.length - i) % 3 == 0) grouped.write(',');
+    grouped.write(digits[i]);
+  }
+  return grouped.toString();
+}
 
 String _speed(double speed) =>
     '${speed.toString().replaceFirst(RegExp(r'\.0$'), '')}×';

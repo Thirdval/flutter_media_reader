@@ -134,29 +134,31 @@ const List<Sample> samples = [
   // Protected: the reader asks the host, and the host asks for the
   // password. It is "harvest".
   Sample(name: 'Accounts_2025.pdf', contentType: 'application/pdf', size: 1406),
+  Sample(name: 'Sermon notes.txt', contentType: 'text/plain', size: 1141),
+  // Markdown with a link, which the host is handed, and an image, which
+  // is never fetched.
+  Sample(name: 'README.md', contentType: null, size: 572),
+  // JSON as a server writes it, on one line: the reader lays it out.
+  Sample(name: 'settings.json', contentType: 'application/json', size: 493),
+  // Thirty thousand lines: only those on screen are built.
+  Sample(
+    name: 'sync.log',
+    contentType: 'text/plain',
+    size: 1534394,
+    via: SampleVia.file,
+  ),
+  // A hundred thousand rows, with a header row that stays.
+  Sample(name: 'attendance.csv', contentType: 'text/csv', size: 3657966),
+  // A zip with folders, two pictures, and a zip inside it: listed from
+  // its end, and only the entry opened is fetched.
+  Sample(name: 'photos.zip', contentType: 'application/zip', size: 44997),
+  Sample(name: 'logs.tar.gz', contentType: 'application/gzip', size: 3577),
+  // An Office file without a PDF yet, and a kind no engine shows: their
+  // cards.
   Sample(
     name: 'Budget 2026.xlsx',
     contentType: 'application/octet-stream',
     size: 58368,
-    bundled: false,
-  ),
-  Sample(
-    name: 'Sermon notes.txt',
-    contentType: 'text/plain',
-    size: 4096,
-    bundled: false,
-  ),
-  Sample(name: 'README.md', contentType: null, size: 2048, bundled: false),
-  Sample(
-    name: 'attendance.csv',
-    contentType: 'text/csv',
-    size: 91136,
-    bundled: false,
-  ),
-  Sample(
-    name: 'photos.zip',
-    contentType: 'application/zip',
-    size: 104857600,
     bundled: false,
   ),
   Sample(

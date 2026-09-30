@@ -81,7 +81,7 @@ host (Tendvine) lends:
 - R0 scaffold (built).
 - R1 the core and the shell (built).
 - R2–R6 one kind of file each: pictures (built), video (built), audio
-  with waveform (built), PDF (built), text/tables/archives.
+  with waveform (built), PDF (built), text/tables/archives (built).
 - R7 Office and HEIC through the host's derivatives.
 - R8 platform polish.
 - R9 Tendvine adopts it (in its own session, in four steps, the first
@@ -292,6 +292,8 @@ abstract interface class MediaReaderPlayback() { ... }
 
 // A document: the page on screen and the count, goToPage, a page drawn
 // small (thumbnail), and search with nextMatch and previousMatch (R5).
+// Its state carries the document's toggles, for the controls: a text's
+// Wrap, a JSON's or a Markdown's Formatted (R6).
 abstract interface class MediaReaderDocument() { ... }
 ```
 
@@ -341,7 +343,7 @@ Also exported for hosts:
 | Text, code, JSON, XML | Flutter text, monospace, pretty print | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Markdown | `flutter_markdown_plus` (MR12) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Table (CSV, TSV) | a virtualised table | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Archive (zip, tar, gz) | `archive`: list, then preview an entry through the registry | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Archive (zip, tar, gz) | read by the package itself, from a zip's end and a tar's headers; an entry opens through the registry (R6) | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Anything else | the file's card | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### 2.4 What stays in the host
@@ -679,7 +681,7 @@ session the same day.
     may come under the top slots until the chrome is tapped away;
   - the outline (bookmarks) is not shown.
 
-### R6 — Text, tables, archives (M)
+### R6 — Text, tables, archives (M) · built
 
 - **Text:**
   - encoding detection (UTF-8, UTF-16 with BOM, Latin-1 fallback);
@@ -698,6 +700,59 @@ session the same day.
   text or CSV file's whole content.
 - **Done when:** a 20 MB log and a 100,000-row CSV scroll smoothly,
   and a zip entry opens in its own engine.
+- **Built (2026-09-30):**
+  - `MediaReaderTextEngine`: a file's bytes as they come, by ranges
+    for a remote file, with the lines found as the bytes arrive and
+    decoded only when shown. A 20 MB log is a buffer and an index of
+    line starts; only the lines on screen are built. UTF-8, UTF-16 by
+    its mark, Windows-1252 as the fallback; a tab is four columns;
+    a line of megabytes is shown as several;
+  - prose in the reader's own face, wrapped at its words; everything
+    else in a face of equal widths, laid out in rows of one height
+    and wrapped at the column as a terminal does, so a long text
+    scrolls and jumps to a place as a short one; the Wrap toggle
+    turns it off. JSON and XML laid out to be read up to 1 MB, every
+    value as the file has it;
+  - a search through every line, a few thousand a frame, marked on
+    the lines; Copy and Select all, with Select all the whole file
+    up to 1 MB; what is copied from several lines has its breaks;
+  - `MediaReaderMarkdownEngine` on `flutter_markdown_plus` 1.0
+    (MR12 as recommended: the row still waits for the owner). Links
+    to the host's `onLink`, images never fetched, the file as written
+    on a toggle, and above 1 MB from the start;
+  - `MediaReaderTableEngine` on `two_dimensional_scrollables` 0.5: the
+    delimiter from the first rows, quoted cells with line breaks, the
+    header row pinned, cells built where they are on screen, a search
+    that goes to the row. A hundred thousand rows opened on both
+    devices and went to the last row by its key;
+  - `MediaReaderArchiveEngine`: zip, tar and gzip. The package reads
+    the formats itself, with `dart:io`'s zlib: a zip's list is at its
+    end and a tar's in its headers, so a remote archive is listed
+    after a few ranges and only the entry opened is fetched, which the
+    `archive` package cannot do with a stream it has not got whole.
+    That package makes the tests' archives instead. An entry opens
+    through the registry in a reader over this one, with the same
+    chrome, policy and engines: a zip in a zip lists in its turn;
+  - `MediaReaderToggle` in the document's state, `MediaReaderPage.
+    engines`, `MediaReaderByteLoader` and `MediaReaderReadAt`: what an
+    engine needs to load a file and to show another;
+  - 510 tests. The example's integration test (twenty-nine) ran on a
+    Pixel 10a (Android 17) and on macOS: a sermon searched, a log of
+    thirty thousand lines from a file, a table of a hundred thousand
+    rows, a README whose link reached the host, JSON laid out, a zip
+    whose picture opened in a reader over the reader, a gzipped tar.
+- **Not run:** iOS (the owner runs iOS builds); Windows and Linux (no
+  machine); a screen reader over a long text.
+- **Known limits, left for R8 or later:**
+  - a video or an audio file inside an archive shows its card: an
+    entry is bytes in memory, and those players take a file or a URL;
+  - 7z and rar show their card;
+  - Select all in a text over 1 MB, or a table over 1 MB, selects
+    what is built, not the file;
+  - a table is not scrolled sideways by the keyboard, and its cells
+    are not selected across a scroll;
+  - the tests run the real widgets, the real zlib and the real
+    formats, on files made on the spot; no goldens (MR14).
 
 ### R7 — Derivatives: Office and HEIC via the host (S)
 
@@ -764,8 +819,8 @@ In every step:
 | R2 | Pictures | ☑ built 2026-09-30 — analyze clean, 182 tests, example run on Android and macOS | `c6ba3f5`; tag `v0.2.0` when the owner asks | ☐ |
 | R3 | Video (`video_player` + `fvp`) | ☑ built 2026-09-30 — analyze clean, 225 tests, example run on Android and macOS | `ea38e36`; tag `v0.3.0` when the owner asks | ☐ |
 | R4 | Audio and waveform, `MediaReaderAudioBar` | ☑ built 2026-09-30 — analyze clean, 304 tests, example run on Android and macOS | `9bbd4b5`; tag `v0.4.0` when the owner asks | ☐ |
-| R5 | PDF (`pdfrx`) | ☑ built 2026-09-30 — analyze clean, 395 tests, example run on Android and macOS | the 0.5.0 commit; tag `v0.5.0` when the owner asks | ☐ |
-| R6 | Text, Markdown, tables, archives | ☐ | | ☐ |
+| R5 | PDF (`pdfrx`) | ☑ built 2026-09-30 — analyze clean, 395 tests, example run on Android and macOS | `b2f1290`; tag `v0.5.0` when the owner asks | ☐ |
+| R6 | Text, Markdown, tables, archives | ☑ built 2026-09-30 — analyze clean, 510 tests, example run on Android and macOS | the 0.6.0 commit; tag `v0.6.0` when the owner asks | ☐ |
 | R7 | Derivatives: Office and HEIC through the host | ☐ | | ☐ |
 | R8 | Platform polish, accessibility, Live Text decision | ☐ | | ☐ |
 | R9a–d | Adoption in Tendvine (the Tendvine session) | ☐ | | ☐ |
@@ -781,6 +836,7 @@ In every step:
 | R3 | – | ✓ | ✓ | – | – |
 | R4 | – | ✓ | ✓ | – | – |
 | R5 | – | ✓ | ✓ | – | – |
+| R6 | – | ✓ | ✓ | – | – |
 
 Each ✓ is the example's integration test, run on a Pixel 10a with
 Android 17 and on macOS 27. iOS was not run: the owner runs iOS
@@ -804,6 +860,11 @@ builds. Windows and Linux were not run: no machine.
   scrolled by a drag and the next file reached by a drag sideways; a
   protected PDF opened with the host's password, and left locked; a
   link handed to the host.
+- R6: twenty-nine tests. A text searched; a log of thirty thousand
+  lines gone to its end; a table of a hundred thousand rows with its
+  header pinned; a README laid out, its link handed to the host; JSON
+  laid out; a zip's folder opened and its picture shown in a reader
+  over the reader; a gzipped tar listed.
 
 Legend: ☐ not started · ◐ in progress · ☑ done (commit) · ✔ owner
 verified · ⊘ blocked (reason). Update the row in the same commit as

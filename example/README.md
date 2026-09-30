@@ -16,6 +16,12 @@ handed and shows in a dialog. `Accounts_2025.pdf` is protected: the
 reader asks the app, the app asks you, and the password is `harvest`.
 Both are written by `tool/make_pdfs.py`.
 
+The texts, the table and the archives are written by
+`tool/make_texts.py`: a sermon, a README with a link and an image,
+JSON on one line, a log of thirty thousand lines, a table of a hundred
+thousand rows, a zip with folders and a zip inside it, and a gzipped
+tar. Nothing in them is anyone's but the example's.
+
 The bundled samples are served by a small server inside the app, on
 the device's loopback: it signs URLs that expire, honours byte ranges
 and refuses what is expired, as a host's CDN would. The example needs

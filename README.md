@@ -5,11 +5,11 @@ audio with waveforms, PDF, Office documents (through a PDF your server
 makes), text, tables and archives, on iOS, Android, macOS, Windows and
 Linux.
 
-> **Status: pre-release (phase R5).** The reader's shell, its host
-> contract, and the engines for pictures, video, audio and PDF are in.
-> The engines for the other kinds arrive phase by phase; until then
-> those files show their card. Progress:
-> [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
+> **Status: pre-release (phase R6).** The reader's shell, its host
+> contract, and the engines for pictures, video, audio, PDF, text,
+> Markdown, tables and archives are in. Office files arrive with R7,
+> through the PDF your server makes of them; until then they show their
+> card. Progress: [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
 
 ## Principles
 
@@ -474,10 +474,11 @@ platform.
   Esc.
 - **Where it is.** The status says "3 of 300". `state.document` gives
   your controls the page on screen and the count, `goToPage`, a page
-  drawn small for a strip (`thumbnail`), and the search. The plain bar
-  has two buttons: Pages opens a strip of the pages and a field for a
-  page's number; Search opens a field, says "2 of 17", and steps
-  through the matches.
+  drawn small for a strip (`thumbnail`), the search, and the
+  document's `toggles` (a text's, below). The plain bar has two
+  buttons: Pages opens a strip of the pages and a field for a page's
+  number; Search opens a field, says "2 of 17", and steps through the
+  matches.
 
   ```dart
   MediaReaderChrome(
@@ -531,6 +532,94 @@ The engine replaces that banner, so the reader never reaches the
 plugin. A test in this repository fails if that changes, or if
 another such package arrives with a dependency.
 
+## Text
+
+`MediaReaderTextEngine` shows plain text, logs, code, JSON, XML and the
+like, in Flutter's own text, a line at a time: a log of 20 MB is a
+buffer and a list of where its lines start, and only the lines on
+screen are built.
+
+- **Loading.** A remote file comes a range at a time, and its start is
+  up while the rest comes. The most a file is taken into memory is
+  32 MB (`maxBytes`); a longer one shows its start and says so at its
+  end.
+- **Reading it.** UTF-8, UTF-16 with its byte-order mark, and
+  Windows-1252 for whatever is not Unicode. A tab is four columns.
+- **How it is set.** Prose (`.txt`) is in the reader's own face,
+  wrapped at its words. Everything else is in a face of equal widths,
+  laid out in rows of one height and wrapped at the column, as a
+  terminal wraps it; the Wrap toggle turns that off, and long lines
+  then go on to the right. JSON and XML are laid out to be read
+  (`Formatted`), up to 1 MB (`maxFormattedBytes`); every name, number
+  and string stays as the file has it.
+- **Search.** Through every line, a few thousand at a time, in any
+  case; the matches are marked, and the plain bar steps through them.
+- **Text.** A long press selects a word, a drag selects with a mouse;
+  Copy and Select all, and nothing else. Select all takes the whole
+  file, not only the lines on screen, up to 1 MB. Copying is not an
+  export.
+- **Keys.** The arrows, Page Up and Page Down, Home and End, while the
+  reader has the keyboard.
+
+## Markdown
+
+`MediaReaderMarkdownEngine` lays a Markdown file out with
+[`flutter_markdown_plus`](https://pub.dev/packages/flutter_markdown_plus),
+in the chrome's colours.
+
+- **Links** go to your `onLink`, and without one are plain text.
+- **Images are never fetched.** Their words stand where they would be.
+- **As written.** The Formatted toggle shows the file as it is written,
+  in the text engine. A file over 1 MB is shown that way from the
+  start.
+- The rest is as for text: selection, copy, the keys.
+
+## Tables
+
+`MediaReaderTableEngine` shows CSV and TSV as a table whose cells are
+built only where they are on screen, with
+[`two_dimensional_scrollables`](https://pub.dev/packages/two_dimensional_scrollables).
+A hundred thousand rows are a hundred thousand rows.
+
+- **Reading it.** The delimiter is the one the first rows agree on
+  (comma, semicolon, tab or bar), or a tab for a `.tsv`. A cell in
+  quotes may hold the delimiter, a line break, and a quote written
+  twice. The columns are as wide as the first rows need, up to 40
+  characters.
+- **The header row stays** as the table scrolls. The status says
+  "100,001 rows".
+- **Search** goes through the rows and marks the cells.
+- **Text.** Cells are copied with tabs between them and rows on lines
+  of their own; Select all takes the file itself.
+- A table wider than the screen takes sideways drags; one that fits
+  leaves them to the pager.
+
+## Archives
+
+`MediaReaderArchiveEngine` lists what a zip, a tar or a gzip file
+holds, and opens an entry through the registry in a reader over this
+one, with the same chrome, policy and engines: a picture in a zip opens
+as a picture, a zip in a zip lists in its turn.
+
+- **A zip is read from its end**, where its list is, and **a tar from
+  its headers**: a large archive on a server is listed after a few
+  ranges, and only the entry that is opened is fetched. A gzip file is
+  one stream, read whole: up to 64 MB (`maxEntryBytes`), which is also
+  the most an entry is taken out at.
+- **Folders** open in place, with a row to go back up. Files show their
+  size; the status says how many there are.
+- **What is not opened.** An encrypted entry, or one packed a way the
+  reader does not unpack (everything but stored and deflated), is
+  there and says so. 7z and rar show their card. An entry is bytes in
+  memory, so a video or an audio file in an archive shows its card.
+- Opening an entry needs a `Navigator` above the reader, as any app
+  has.
+
+The archive formats are read by the package itself, with `dart:io`'s
+zlib, so that a remote archive is not fetched whole to be listed. The
+tests make their archives with the `archive` package and read them
+back with this one.
+
 ## Engines by kind
 
 Every engine runs on all five platforms.
@@ -543,9 +632,10 @@ Every engine runs on all five platforms.
 | Waveform | drawn from peaks your server computes | In |
 | PDF | [`pdfrx`](https://pub.dev/packages/pdfrx) (PDFium) | In |
 | Office | your server's PDF, through `pdfrx` | Planned |
-| Text, code, JSON, Markdown | Flutter text, `flutter_markdown_plus` | Planned |
-| CSV, TSV | a virtualised table | Planned |
-| Zip, tar, gz | [`archive`](https://pub.dev/packages/archive), entries previewed in place | Planned |
+| Text, code, JSON | Flutter text, a line at a time | In |
+| Markdown | [`flutter_markdown_plus`](https://pub.dev/packages/flutter_markdown_plus) | In |
+| CSV, TSV | [`two_dimensional_scrollables`](https://pub.dev/packages/two_dimensional_scrollables) | In |
+| Zip, tar, gz | read by the package, entries opened through the registry | In |
 
 ## Development
 

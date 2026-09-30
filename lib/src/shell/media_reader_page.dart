@@ -5,6 +5,7 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 
+import '../engine/media_reader_engines.dart';
 import '../item/media_reader_item.dart';
 import '../item/media_reader_policy.dart';
 import '../item/media_reader_resolver.dart';
@@ -23,6 +24,10 @@ final class MediaReaderPage({
   int count = 1,
   MediaReaderPolicy policy = const MediaReaderPolicy(),
   MediaReaderChrome chrome = const MediaReaderChrome(),
+
+  /// The engines the reader shows files with: for an engine that shows
+  /// another file through them, an archive its entries.
+  final MediaReaderEngines engines = MediaReaderEngines.standard,
   bool current = true,
   MediaReaderResolver? resolver,
   ValueNotifier<bool>? chromeVisible,

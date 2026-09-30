@@ -34,7 +34,10 @@ class SampleServer(
     'txt': 'text/plain; charset=utf-8',
     'md': 'text/markdown; charset=utf-8',
     'csv': 'text/csv; charset=utf-8',
+    'log': 'text/plain; charset=utf-8',
+    'json': 'application/json',
     'zip': 'application/zip',
+    'gz': 'application/gzip',
   };
 
   /// How long a signed URL is good for.

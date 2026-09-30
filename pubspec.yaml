@@ -1,6 +1,6 @@
 name: flutter_media_reader
 description: "An in-app reader for the files a host hands it: pictures, video, audio with waveforms, PDF, text, tables and archives, on every platform, through swappable engines."
-version: 0.5.0
+version: 0.6.0
 homepage: https://github.com/Thirdval/flutter_media_reader
 repository: https://github.com/Thirdval/flutter_media_reader
 issue_tracker: https://github.com/Thirdval/flutter_media_reader/issues
@@ -33,6 +33,11 @@ dependencies:
   # PDF (MR5): pdfrx, on PDFium, on every platform. The engine reads a
   # remote file by ranges itself and hands pdfrx the bytes.
   pdfrx: ^2.6.5
+  # Markdown (MR12): rendered by flutter_markdown_plus; links go to the
+  # host, and images are never fetched.
+  flutter_markdown_plus: ^1.0.12
+  # Tables: a virtualised table for CSV and TSV, from the Flutter team.
+  two_dimensional_scrollables: ^0.5.5
 
 dev_dependencies:
   flutter_test:
@@ -41,6 +46,9 @@ dev_dependencies:
   video_player_platform_interface: ^6.9.0
   # The PDF tests make a protected PDF on the spot.
   crypto: ^3.0.0
+  # The archive tests make their zips and tars with a second, maintained
+  # implementation, and read them back with the package's own.
+  archive: ^4.0.0
   flutter_lints: ^6.0.0
 
 flutter:
