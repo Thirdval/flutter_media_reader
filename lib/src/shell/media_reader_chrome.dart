@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import '../item/media_reader_item.dart';
 import '../item/media_reader_policy.dart';
 import 'media_reader_document.dart';
+import 'media_reader_glyph.dart';
 import 'media_reader_playback.dart';
 import 'media_reader_strings.dart';
 
@@ -103,6 +104,13 @@ class const MediaReaderChrome({
   /// on screen marked; a tap goes to a file. It hides with the rest of
   /// the chrome. `double.infinity` shows none (R8).
   final double railFromWidth = 900,
+
+  /// The host's icons for the glyphs on the plain controls: the
+  /// transport, the document bar, the close button. Each is asked for
+  /// by name, colour and size; null, or a builder that returns null,
+  /// keeps the reader's own drawing of that glyph. [MediaReaderAudioBar]
+  /// takes the same builder as its own `glyph` (1.1).
+  final MediaReaderGlyphBuilder? glyph,
 
   /// The canvas.
   final Color background = const Color(0xFF000000),

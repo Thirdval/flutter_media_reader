@@ -39,6 +39,7 @@ export 'src/item/media_reader_source.dart';
 export 'src/media_kind.dart';
 export 'src/shell/media_reader_chrome.dart';
 export 'src/shell/media_reader_document.dart';
+export 'src/shell/media_reader_glyph.dart';
 export 'src/shell/media_reader_page.dart' show MediaReaderPage;
 export 'src/shell/media_reader_playback.dart';
 export 'src/shell/media_reader_strings.dart';

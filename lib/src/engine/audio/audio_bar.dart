@@ -11,6 +11,7 @@ import 'package:flutter/widgets.dart';
 import '../../item/media_reader_item.dart';
 import '../../shell/media_reader_playback.dart';
 import '../../shell/media_reader_strings.dart';
+import '../../shell/media_reader_glyph.dart';
 import '../../shell/plain_widgets.dart';
 import '../../shell/transport_bar.dart';
 import '../../shell/waveform.dart';
@@ -38,6 +39,10 @@ class const MediaReaderAudioBar({
   /// The glyphs, the waveform and the text.
   required final Color color,
   final MediaReaderStrings strings = const MediaReaderStrings(),
+
+  /// The host's icons for the play and pause glyphs, as
+  /// [MediaReaderChrome.glyph]; null keeps the bar's own drawing.
+  final MediaReaderGlyphBuilder? glyph,
 
   /// Whether the file stops when the bar is removed. Left false, a note
   /// that is playing plays on to its end when its bubble scrolls out of
@@ -153,6 +158,7 @@ class _MediaReaderAudioBarState() extends State<MediaReaderAudioBar> {
               glyph: active ? MediaReaderGlyph.pause : MediaReaderGlyph.play,
               label: active ? strings.pause : strings.play,
               colour: opening ? colour.withValues(alpha: 0.5) : colour,
+              draw: widget.glyph,
               onPressed: session == null
                   ? null
                   : () => unawaited(active ? session.pause() : session.play()),

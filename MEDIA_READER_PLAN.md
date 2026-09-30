@@ -248,6 +248,7 @@ class const MediaReaderChrome({
   controls, // for what plays (R3), or for a document (R5)
   cardActions, // the host's actions on a file's card
   menu, // the host's actions on a right-click or a long press (R8)
+  glyph, // the host's icons for the plain controls' glyphs (1.1)
   background, foreground,
   contentInsets, // the room the slots take: a page that scrolls keeps it clear (R5)
   railFromWidth, // the width from which the rail of files stands (R8)
@@ -935,6 +936,18 @@ In every step:
   Tendvine to pin by. **For the owner:** the pub.dev decision (MR13):
   the package is ready for `dart pub publish --dry-run` but has no
   `repository` field, since Tendvine pins by git ref.
+
+### After 1.0
+
+- **1.1.0 (2026-10-01) — the host's icons.** Asked for by Tendvine's
+  session during R9: the app draws its own icon set (Solar) and wants
+  it on the reader's plain controls. `MediaReaderChrome.glyph` (§2.2)
+  is asked for each glyph by name, colour and size and may return
+  null to keep the reader's drawing; `MediaReaderAudioBar.glyph` is
+  the same builder for a bar outside the chrome. `MediaReaderGlyph`
+  is exported. Six tests; the example's chrome draws Material's icons
+  through it, and its integration tests ran on macOS (33). The Pixel
+  was locked when this was built and could not run it.
 
 ---
 

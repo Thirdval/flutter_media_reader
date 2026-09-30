@@ -6,6 +6,8 @@ library;
 import 'package:flutter/widgets.dart';
 
 import 'media_reader_chrome.dart';
+import 'media_reader_glyph.dart';
+import 'plain_widgets.dart';
 
 /// The default top start: the file's name, and its place among the items
 /// when there are several.
@@ -73,7 +75,22 @@ class const MediaReaderDefaultClose({
               ),
               child: SizedBox.square(
                 dimension: 32,
-                child: CustomPaint(painter: _Cross(chrome.foreground)),
+                child: switch (chrome.glyph?.call(
+                  context,
+                  MediaReaderGlyph.close,
+                  chrome.foreground,
+                  MediaReaderGlyphButton.glyphSize,
+                )) {
+                  null => CustomPaint(painter: _Cross(chrome.foreground)),
+                  final icon => Center(
+                    child: ExcludeSemantics(
+                      child: SizedBox.square(
+                        dimension: MediaReaderGlyphButton.glyphSize,
+                        child: icon,
+                      ),
+                    ),
+                  ),
+                },
               ),
             ),
           ),

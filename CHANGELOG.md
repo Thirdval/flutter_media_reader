@@ -1,3 +1,14 @@
+## 1.1.0 — 2026-10-01
+
+- `MediaReaderChrome.glyph`: the host's own icons on the plain
+  controls (the transport, the document bar and its search, the close
+  button) in place of the glyphs the reader draws. `MediaReaderGlyph`
+  names them (play, pause, sound, muted, search, pages, up, down,
+  close); the builder is told the glyph, the colour and the size, and
+  returns null to keep the reader's drawing. `MediaReaderAudioBar`
+  takes the same builder as its `glyph`. The example's chrome uses
+  Material's icons through it.
+
 ## 1.0.0 — 2026-09-30
 
 Phase R10, 1.0 (MEDIA_READER_PLAN.md):

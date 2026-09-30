@@ -217,6 +217,7 @@ the page (`playback`) or the document on it (`document`), and
 | `status` | The engine's status: "1 of 15", a time | A pill, while there is one |
 | `cardActions` | Your actions on a file's card: save, share | Empty |
 | `menu` | Your actions on a right-click or a long press: a list of `(label, onPressed)` | None |
+| `glyph` | Your icons for the glyphs on the plain controls: `(context, glyph, colour, size) => Widget?` | The reader's own drawings |
 
 ```dart
 MediaReaderChrome(
@@ -247,6 +248,28 @@ MediaReaderChrome(
   them in your colours where the pointer is, and closes the menu when
   one is chosen. `railFromWidth` is the width from which the rail of
   files shows.
+- `glyph` draws the plain controls' glyphs with your own icon set
+  (`MediaReaderGlyph`: play, pause, sound, muted, search, pages, up,
+  down, close), each asked for by name, colour and size — 24 on the
+  reader's 40-pixel buttons. Return null for a glyph to keep the
+  reader's own drawing of it. The buttons keep their names for a
+  screen reader. `MediaReaderAudioBar` takes the same builder as its
+  `glyph`:
+
+  ```dart
+  MediaReaderChrome(
+    glyph: (context, glyph, colour, size) => Icon(
+      switch (glyph) {
+        MediaReaderGlyph.play => Icons.play_arrow,
+        MediaReaderGlyph.pause => Icons.pause,
+        // ...
+        MediaReaderGlyph.close => Icons.close,
+      },
+      color: colour,
+      size: size,
+    ),
+  )
+  ```
 
 ## Engines
 

@@ -10,6 +10,7 @@ import 'package:flutter/widgets.dart';
 
 import 'document_pages.dart';
 import 'media_reader_chrome.dart';
+import 'media_reader_glyph.dart';
 import 'media_reader_document.dart';
 import 'plain_field.dart';
 import 'plain_widgets.dart';
@@ -123,6 +124,7 @@ class _MediaReaderDocumentBarState() extends State<MediaReaderDocumentBar> {
                   glyph: MediaReaderGlyph.pages,
                   label: strings.pages,
                   colour: colour,
+                  draw: widget.chrome.glyph,
                   onPressed: () => _toggle(_Showing.pages),
                 ),
               if (state.searchable)
@@ -130,6 +132,7 @@ class _MediaReaderDocumentBarState() extends State<MediaReaderDocumentBar> {
                   glyph: MediaReaderGlyph.search,
                   label: strings.search,
                   colour: colour,
+                  draw: widget.chrome.glyph,
                   onPressed: () => _toggle(_Showing.search),
                 ),
               for (final toggle in state.toggles)
@@ -237,18 +240,21 @@ class _MediaReaderDocumentBarState() extends State<MediaReaderDocumentBar> {
         glyph: MediaReaderGlyph.up,
         label: strings.previousMatch,
         colour: colour.withValues(alpha: found ? 1 : 0.4),
+        draw: widget.chrome.glyph,
         onPressed: found ? () => unawaited(_document.previousMatch()) : null,
       ),
       MediaReaderGlyphButton(
         glyph: MediaReaderGlyph.down,
         label: strings.nextMatch,
         colour: colour.withValues(alpha: found ? 1 : 0.4),
+        draw: widget.chrome.glyph,
         onPressed: found ? () => unawaited(_document.nextMatch()) : null,
       ),
       MediaReaderGlyphButton(
         glyph: MediaReaderGlyph.close,
         label: strings.endSearch,
         colour: colour,
+        draw: widget.chrome.glyph,
         onPressed: _endSearch,
       ),
     ];

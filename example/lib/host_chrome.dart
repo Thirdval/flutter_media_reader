@@ -40,6 +40,23 @@ final MediaReaderChrome hostChrome = MediaReaderChrome(
   bottomEnd: (context, state) => _Capsule(
     child: _Action('More', onPressed: () => _say(context, 'More', state)),
   ),
+  // This host's own icons on the reader's plain controls, in place of
+  // the glyphs the package draws.
+  glyph: (context, glyph, colour, size) => Icon(
+    switch (glyph) {
+      MediaReaderGlyph.play => Icons.play_arrow_rounded,
+      MediaReaderGlyph.pause => Icons.pause_rounded,
+      MediaReaderGlyph.sound => Icons.volume_up_rounded,
+      MediaReaderGlyph.muted => Icons.volume_off_rounded,
+      MediaReaderGlyph.search => Icons.search_rounded,
+      MediaReaderGlyph.pages => Icons.grid_view_rounded,
+      MediaReaderGlyph.up => Icons.keyboard_arrow_up_rounded,
+      MediaReaderGlyph.down => Icons.keyboard_arrow_down_rounded,
+      MediaReaderGlyph.close => Icons.close_rounded,
+    },
+    color: colour,
+    size: size,
+  ),
   // The same actions on a right-click, or a long press with a finger.
   menu: (context, state) => [
     (label: 'Reply', onPressed: () => _say(context, 'Reply', state)),

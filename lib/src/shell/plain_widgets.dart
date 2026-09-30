@@ -8,6 +8,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart';
 
 import 'media_reader_chrome.dart';
+import 'media_reader_glyph.dart';
 
 /// A plain pill button in the chrome's colours.
 class const MediaReaderPlainButton({
@@ -146,27 +147,24 @@ class const _Ring(final Color color, final Animation<double> turn)
   bool shouldRepaint(_Ring old) => old.color != color;
 }
 
-/// The glyphs the reader draws itself: no icon font is assumed.
-enum MediaReaderGlyph() {
-  play,
-  pause,
-  sound,
-  muted,
-  search,
-  pages,
-  up,
-  down,
-  close,
-}
-
-/// A round button with a drawn glyph: no icon font is assumed.
+/// A round button with a glyph: the host's icon where it draws one,
+/// else the reader's own drawing, which assumes no icon font.
 class const MediaReaderGlyphButton({
   required final MediaReaderGlyph glyph,
   required final String label,
   required final Color colour,
   required final VoidCallback? onPressed,
+
+  /// The host's icons ([MediaReaderChrome.glyph]).
+  final MediaReaderGlyphBuilder? draw,
   super.key,
 }) extends StatelessWidget {
+  /// The button's side.
+  static const double side = 40;
+
+  /// The size a host's icon is asked for.
+  static const double glyphSize = 24;
+
   @override
   Widget build(BuildContext context) => Semantics(
     button: true,
@@ -177,8 +175,15 @@ class const MediaReaderGlyphButton({
         behavior: HitTestBehavior.opaque,
         onTap: onPressed,
         child: SizedBox.square(
-          dimension: 40,
-          child: CustomPaint(painter: _GlyphPainter(glyph, colour)),
+          dimension: side,
+          child: switch (draw?.call(context, glyph, colour, glyphSize)) {
+            null => CustomPaint(painter: _GlyphPainter(glyph, colour)),
+            final icon => Center(
+              child: ExcludeSemantics(
+                child: SizedBox.square(dimension: glyphSize, child: icon),
+              ),
+            ),
+          },
         ),
       ),
     ),

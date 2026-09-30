@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import 'media_reader_chrome.dart';
+import 'media_reader_glyph.dart';
 import 'media_reader_playback.dart';
 import 'plain_widgets.dart';
 import 'waveform.dart';
@@ -140,6 +141,7 @@ class const MediaReaderTransportBar({
     glyph: state.playing ? MediaReaderGlyph.pause : MediaReaderGlyph.play,
     label: state.playing ? chrome.strings.pause : chrome.strings.play,
     colour: chrome.foreground,
+    draw: chrome.glyph,
     onPressed: () => _toggle(state),
   );
 
@@ -162,6 +164,7 @@ class const MediaReaderTransportBar({
       glyph: state.muted ? MediaReaderGlyph.muted : MediaReaderGlyph.sound,
       label: state.muted ? chrome.strings.unmute : chrome.strings.mute,
       colour: chrome.foreground,
+      draw: chrome.glyph,
       onPressed: () => unawaited(playback.setMuted(!state.muted)),
     ),
   ];
