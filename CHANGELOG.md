@@ -1,3 +1,26 @@
+## 0.2.0 — 2026-09-30
+
+Phase R2, pictures (MEDIA_READER_PLAN.md):
+
+- `MediaReaderPictureEngine`: JPEG, PNG, GIF, WebP, BMP and ICO
+  everywhere, HEIC and TIFF where the system decodes them; pinch,
+  double tap and wheel zoom; panning within the edges; the zoom gone
+  when the page is left.
+- A picture is decoded to fit the screen whatever its size, again with
+  more detail once zoomed into, and never past a cap.
+- At rest a drag pages or dismisses; zoomed, or with two fingers down,
+  it is the picture's. A quick flick pages on a phone too.
+- A remote picture is fetched at the location the page keeps, renewed
+  once when it is refused, and known to the image cache by the file,
+  not by its URL. A host may give its own image provider, asked only
+  while export is allowed.
+- `MediaReaderTransport` and `MediaReaderFetcher`: how an engine with
+  no plugin of its own fetches a file, whole or by range.
+- The card offers "Try again" after a failure; `MediaReaderPage.retry`.
+- `MediaReaderItem.format`.
+- The example serves bundled samples from a loopback server that signs
+  and expires URLs as a host's CDN would.
+
 ## 0.1.0 — 2026-09-30
 
 Phase R1, the core and the shell (MEDIA_READER_PLAN.md):

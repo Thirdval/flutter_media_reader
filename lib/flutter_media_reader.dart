@@ -4,16 +4,19 @@
 /// never leave the app: exporting is the host's action, under the
 /// host's policy.
 ///
-/// Pre-release: phase R1 of MEDIA_READER_PLAN.md. The reader's shell and
+/// Pre-release: phase R2 of MEDIA_READER_PLAN.md. The reader's shell and
 /// its host contract are here — `showMediaReader` and [MediaReaderView],
 /// items and their sources, the policy, the chrome's slots, and the
-/// registry of engines. The engines for each kind arrive from R2 on;
-/// until then every file shows its card.
+/// registry of engines — with the engine for pictures. The other kinds
+/// arrive phase by phase; until then they show their card.
 library;
 
 export 'src/engine/media_reader_card_engine.dart';
 export 'src/engine/media_reader_engine.dart';
 export 'src/engine/media_reader_engines.dart';
+export 'src/engine/picture/picture_engine.dart';
+export 'src/io/media_reader_fetcher.dart';
+export 'src/io/media_reader_transport.dart';
 export 'src/item/media_reader_item.dart';
 export 'src/item/media_reader_policy.dart';
 export 'src/item/media_reader_resolver.dart';

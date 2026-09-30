@@ -5,10 +5,10 @@ audio with waveforms, PDF, Office documents (through a PDF your server
 makes), text, tables and archives, on iOS, Android, macOS, Windows and
 Linux.
 
-> **Status: pre-release (phase R1).** The reader's shell and its host
-> contract are in. The engines for each kind arrive from R2; until
-> then every file shows its card. Progress:
-> [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
+> **Status: pre-release (phase R2).** The reader's shell, its host
+> contract and the picture engine are in. The engines for the other
+> kinds arrive phase by phase; until then those files show their card.
+> Progress: [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
 
 ## Principles
 
@@ -107,8 +107,9 @@ Future<MediaReaderLocation> resolve(SharedFile file) async {
 }
 ```
 
-- It is called when an engine asks for the file, not when the reader
-  opens and not for a neighbour's poster.
+- It is called when an engine asks for the file, never just because
+  the reader opened. The picture engine asks for its neighbours ahead
+  of time, unless you tell it not to (see Pictures).
 - The answer is kept until 30 seconds before it expires, or until an
   engine reports it refused; then `resolve` is called again.
 - It is kept while the file is paged away from, and dropped when you
@@ -185,8 +186,8 @@ MediaReaderChrome(
 - `background` and `foreground` colour the canvas, the card and the
   plain defaults; text in your slots inherits `foreground`.
 - `strings` holds the few words the reader itself draws or speaks: the
-  card, the plain defaults and the page announcement. They are English
-  unless you pass your own.
+  card and its reasons, the plain defaults and the page announcement.
+  They are English unless you pass your own.
 - `close` is null where the reader cannot be closed.
 
 ## Engines
@@ -233,24 +234,92 @@ class const ModelEngine() implements MediaReaderEngine {
 | `holdsPaging`, `holdsDismiss` | Set while the engine owns sideways or downward drags: zoomed, or scrolled away from its top. |
 | `chromeVisible`, `toggleChrome()` | For an engine with controls of its own, or one that takes taps. |
 | `fail(reason)` | The engine cannot show the file: its card takes the engine's place, with the reason. |
+| `retry()` | The engine starts afresh. The card's "Try again" calls it. |
 | `policy`, `chrome` | What the host allows; the colours and words around the page. |
 
 The card shows the file's name, kind and size, why it is not shown,
-and your `cardActions`.
+and your `cardActions`. After a failure it also offers "Try again".
 
-## Planned engines
+`item.format` is the file's format as a short name ("jpeg", "heic",
+"mp4", "m4a"): from a specific content type, otherwise from the
+extension. An engine decides by it whether it shows the file on a
+platform.
 
-| Kind | Engine | Platforms |
+An engine with no plugin of its own fetches through a
+`MediaReaderTransport`. The default is `dart:io`'s `HttpClient`; pass
+your own to an engine to use your HTTP stack:
+
+```dart
+MediaReaderPictureEngine(transport: YourTransport(dio))
+```
+
+## Pictures
+
+`MediaReaderPictureEngine` shows what Flutter decodes on the platform:
+
+| Format | Where |
+| --- | --- |
+| JPEG, PNG, GIF, WebP, BMP, ICO | Every platform |
+| HEIC, TIFF | iOS and macOS, where the system decodes them |
+| HEIC elsewhere | Through its `preview`, the JPEG your server makes |
+| SVG, AVIF | The card |
+
+- **Zoom.** Pinch, double tap, or the mouse wheel, up to 8 times. A
+  double tap goes to 2.5 times at the point tapped, and back. A zoomed
+  picture pans within its edges. The zoom is gone when the page is
+  left.
+- **Gestures.** At rest a drag is the shell's: it pages or dismisses.
+  While the picture is zoomed, or two fingers are on it, drags are the
+  picture's.
+- **Memory.** A picture is decoded to fit the screen, whatever the
+  file's size: a 48-megapixel photo is decoded at 1080 by 810 on a
+  phone 1080 pixels wide. Zoomed into, it is decoded again with the
+  detail the zoom shows, never past 4096 pixels on its longest side.
+  A file over 64 MB is not fetched. All three numbers are the engine's
+  parameters.
+- **Loading.** The item's `poster` shows until the first frame. The
+  neighbours' pictures are fetched ahead, so they are there when paged
+  to; `prepareNeighbours: false` asks for a picture only when its page
+  comes on screen, which suits a host that meters its resolves.
+- **Failing.** A file that does not decode, does not arrive, or is too
+  large gives way to the card, with the reason.
+
+To reuse a cache your app already has, give the engine your own image
+provider:
+
+```dart
+MediaReaderEngines.standard.withFirst([
+  MediaReaderPictureEngine(
+    imageProvider: (item, page) async {
+      final location = await page.resolve();
+      return YourCachedImage(
+        location.uri,
+        headers: location.headers,
+        cacheKey: item.id, // the URL changes with every signature
+      );
+    },
+  ),
+])
+```
+
+It is asked only while the policy allows export: such a cache is
+usually on disk, and with export off nothing is kept there.
+
+## Engines by kind
+
+Every engine runs on all five platforms.
+
+| Kind | Engine | Status |
 | --- | --- | --- |
-| Pictures | Flutter `Image` + `InteractiveViewer` | all |
-| Video | `video_player` (AVPlayer, ExoPlayer) with [`fvp`](https://pub.dev/packages/fvp) on Windows and Linux | all |
-| Audio | [`just_audio`](https://pub.dev/packages/just_audio); `fvp` on Windows and Linux | all |
-| Waveform | drawn from peaks your server computes | all |
-| PDF | [`pdfrx`](https://pub.dev/packages/pdfrx) (PDFium) | all |
-| Office | your server's PDF, through `pdfrx` | all |
-| Text, code, JSON, Markdown | Flutter text, `flutter_markdown_plus` | all |
-| CSV, TSV | a virtualised table | all |
-| Zip, tar, gz | [`archive`](https://pub.dev/packages/archive), entries previewed in place | all |
+| Pictures | Flutter `Image` + `InteractiveViewer` | In |
+| Video | `video_player` (AVPlayer, ExoPlayer) with [`fvp`](https://pub.dev/packages/fvp) on Windows and Linux | Planned |
+| Audio | [`just_audio`](https://pub.dev/packages/just_audio); `fvp` on Windows and Linux | Planned |
+| Waveform | drawn from peaks your server computes | Planned |
+| PDF | [`pdfrx`](https://pub.dev/packages/pdfrx) (PDFium) | Planned |
+| Office | your server's PDF, through `pdfrx` | Planned |
+| Text, code, JSON, Markdown | Flutter text, `flutter_markdown_plus` | Planned |
+| CSV, TSV | a virtualised table | Planned |
+| Zip, tar, gz | [`archive`](https://pub.dev/packages/archive), entries previewed in place | Planned |
 
 ## Development
 

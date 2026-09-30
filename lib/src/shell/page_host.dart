@@ -99,7 +99,7 @@ class _MediaReaderPageHostState() extends State<MediaReaderPageHost> {
     final showing = _select();
     // Another engine has the file now (its preview arrived, the host
     // changed the registry): what the last one failed at no longer holds.
-    if (showing.engine.id != _showing.engine.id) _binding.clearFailure();
+    if (showing.engine.id != _showing.engine.id) _page.retry();
     _showing = showing;
     _binding
       ..update(

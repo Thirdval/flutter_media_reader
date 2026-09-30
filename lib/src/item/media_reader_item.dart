@@ -5,6 +5,7 @@ library;
 import 'package:flutter/widgets.dart';
 
 import '../media_kind.dart';
+import 'media_format.dart';
 import 'media_reader_source.dart';
 
 /// A file the host hands the reader.
@@ -40,6 +41,12 @@ class const MediaReaderItem({
   /// without one, [contentType] and [name] are read by [MediaKind.of].
   MediaKind get kind =>
       _kind ?? MediaKind.of(contentType: contentType, fileName: name);
+
+  /// The file's format as a short lower-case name ("jpeg", "mp4", "m4a",
+  /// "pdf"): from [contentType] where it is specific, from the extension
+  /// of [name] otherwise, and empty when neither says. An engine decides
+  /// by it whether it shows the file on a platform.
+  String get format => mediaFormatOf(contentType: contentType, fileName: name);
 }
 
 /// A derivative the host makes of a file the reader cannot show as it is:

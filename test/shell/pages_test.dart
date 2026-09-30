@@ -107,6 +107,29 @@ void main() {
       expect(find.text('The preview is damaged.'), findsOneWidget);
     });
 
+    testWidgets('is tried again from the card', (tester) async {
+      await pumpReader(tester, items: pictures(1), engines: engines);
+      engine.pages['a.jpg']!.fail('The picture is damaged.');
+      await tester.pump();
+      expect(engine.alive, isEmpty);
+
+      await tester.tap(find.text('Try again'));
+      await tester.pump();
+
+      expect(find.text('fake:a.jpg'), findsOneWidget);
+      expect(find.text('The picture is damaged.'), findsNothing);
+      expect(engine.alive, ['a.jpg']);
+    });
+
+    testWidgets('has nothing to try again where no engine shows the file', (
+      tester,
+    ) async {
+      await pumpReader(tester, items: [item('model.glb')], engines: engines);
+
+      expect(find.text('This file cannot be shown here.'), findsOneWidget);
+      expect(find.text('Try again'), findsNothing);
+    });
+
     testWidgets('may fail while it builds', (tester) async {
       await pumpReader(
         tester,

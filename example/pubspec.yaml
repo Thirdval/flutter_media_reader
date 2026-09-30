@@ -22,3 +22,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # The files the example opens. A loopback server inside the app serves
+  # them the way a host's CDN would: signed, expiring, by range.
+  assets:
+    - assets/samples/

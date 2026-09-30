@@ -8,10 +8,11 @@ per platform. Files never leave the app: exporting is the host's
 action, under the host's policy.
 
 **Status:** accepted by the owner on 2026-09-30. R0 (this scaffold)
-and R1 (the core and the shell) were built the same day; both wait for
-the owner's check. R1 onward belong to this repository's own session.
-Progress is tracked in §5, one row per phase, updated in the same
-commit as the work, with an owner check after each phase.
+was built the same day, and the phases after it by this repository's
+own session: §5 says how far it has come. Each phase's row is updated
+in the same commit as its work, and goes into `main` once the session
+has verified it. The owner's check of each phase is still the
+owner's.
 
 **Owner decisions (2026-09-30):**
 - Video goes through the `video_player` API with `fvp` as its engine
@@ -27,6 +28,10 @@ commit as the work, with an owner check after each phase.
   `MediaReaderEngine`, and so on). `flutter_reader`, which Tendvine's
   chat views import, already exports `ReaderItem` and `ReaderEngine`
   (§2.2).
+- The session carries on through the remaining phases, and puts each
+  in `main` after verifying it: format, analyze, the tests, and the
+  example's integration test on the devices at hand. Nothing is pushed
+  or tagged until the owner asks.
 
 **Owner decisions (2026-09-30, relayed by Tendvine's backend
 session):**
@@ -75,8 +80,8 @@ host (Tendvine) lends:
 **Phases:**
 - R0 scaffold (built).
 - R1 the core and the shell (built).
-- R2–R6 one kind of file each: pictures, video, audio with waveform,
-  PDF, text/tables/archives.
+- R2–R6 one kind of file each: pictures (built), video, audio with
+  waveform, PDF, text/tables/archives.
 - R7 Office and HEIC through the host's derivatives.
 - R8 platform polish.
 - R9 Tendvine adopts it (in its own session, in four steps, the first
@@ -424,12 +429,12 @@ session the same day.
     for the owner.
 - **Left for later phases:**
   - no engine exists yet, so every file shows its card;
-  - a retry from the card comes with R7, and a slot for an engine's
-    transport controls with R3;
+  - a slot for an engine's transport controls comes with R3 (the
+    retry from the card came with R2);
   - iOS was not run (the owner runs iOS builds), nor Windows or Linux
     (no machine; planned from R3).
 
-### R2 — Pictures (M)
+### R2 — Pictures (M) · built
 
 - **Engine:** `InteractiveViewer`.
   - Pinch, double-tap and wheel zoom; pan within bounds; the zoom
@@ -441,6 +446,35 @@ session the same day.
 - **Fallback:** SVG and undecodable files go to the card.
 - **Done when:** a 50 MP photo opens without a memory spike, zoom and
   dismiss never fight, and the tests cover the gesture states.
+- **Built (2026-09-30):**
+  - `MediaReaderPictureEngine`: JPEG, PNG, GIF, WebP, BMP and ICO on
+    every platform; HEIC and TIFF on iOS and macOS, and a HEIC
+    elsewhere through its preview (the server's JPEG);
+  - a picture is decoded to fit the screen; zoomed into, again with
+    the detail the zoom shows, never past 4096 pixels on its longest
+    side; a file over 64 MB is not fetched. The three numbers are the
+    engine's parameters, and are in the README;
+  - a 48-megapixel JPEG (8000 by 6000) was decoded at 1080 by 810 on
+    the Pixel and within the window on macOS;
+  - at rest a drag is the shell's; zoomed, or with two fingers down,
+    it is the picture's. On a phone the picture's own recognizer took
+    any quick flick, because it is the deeper one and a phone's pan
+    slop is small: at rest its pan slop is now out of reach, and a
+    pinch is judged by the change of span;
+  - a remote picture is fetched by the package (`MediaReaderFetcher`
+    over a `MediaReaderTransport`, `dart:io` by default), at the
+    location the page keeps, renewed once on 401, 403 or 410, and
+    known to the image cache by the file's id;
+  - the host's image provider is asked only while export is allowed:
+    a host's cache is usually on disk (MR9);
+  - the neighbours' pictures are fetched ahead, as §2.1 says. A host
+    that meters its resolves turns that off (`prepareNeighbours`);
+  - the card offers "Try again" after a failure;
+  - the example serves its bundled samples from a loopback server that
+    signs, expires and ranges as a CDN would; 182 tests.
+- **Left for later phases:** zooming by keyboard and the semantics of
+  zoom (R8); an animated picture on a neighbour page keeps decoding
+  its frames.
 
 ### R3 — Video (M)
 
@@ -574,8 +608,8 @@ In every step:
 | Phase | Title | Status | Commit / tag | Owner check |
 | --- | --- | --- | --- | --- |
 | R0 | Scaffold: repo, pins, lints, CI, example for five platforms, `MediaKind`, plan, CLAUDE.md | ☑ built 2026-09-30 — analyze clean, 5 tests, example builds for macOS | initial commit | ☐ |
-| R1 | Core and shell: items, sources, policy, registry, pager, chrome slots, the card engine | ☑ built 2026-09-30 — analyze clean, 117 tests, example run on Android and macOS | the 0.1.0 commit; tag `v0.1.0` when the owner asks | ☐ |
-| R2 | Pictures | ☐ | | ☐ |
+| R1 | Core and shell: items, sources, policy, registry, pager, chrome slots, the card engine | ☑ built 2026-09-30 — analyze clean, 117 tests, example run on Android and macOS | `d2c235e`; tag `v0.1.0` when the owner asks | ☐ |
+| R2 | Pictures | ☑ built 2026-09-30 — analyze clean, 182 tests, example run on Android and macOS | the 0.2.0 commit; tag `v0.2.0` when the owner asks | ☐ |
 | R3 | Video (`video_player` + `fvp`) | ☐ | | ☐ |
 | R4 | Audio and waveform, `MediaReaderAudioBar` | ☐ | | ☐ |
 | R5 | PDF (`pdfrx`) | ☐ | | ☐ |
@@ -591,11 +625,17 @@ In every step:
 | --- | --- | --- | --- | --- | --- |
 | R0 | – | – | ✓ build | – | – |
 | R1 | – | ✓ | ✓ | – | – |
+| R2 | – | ✓ | ✓ | – | – |
 
-R1 was run as the example's integration test (four tests: open, page,
-close by key, by button and by drag, export on and off) on a Pixel 10a
-with Android 17 and on macOS 27. iOS was not run: the owner runs iOS
+Each ✓ is the example's integration test, run on a Pixel 10a with
+Android 17 and on macOS 27. iOS was not run: the owner runs iOS
 builds. Windows and Linux were not run: no machine.
+- R1: four tests (open, page, close by key, by button and by drag,
+  export on and off).
+- R2: eight tests. Pictures from a signed URL, a file and bytes; a
+  48-megapixel JPEG decoded within the screen; zoom; paging; a HEIC
+  as it is on macOS and through its JPEG on Android; an expired URL
+  resolved again.
 
 Legend: ☐ not started · ◐ in progress · ☑ done (commit) · ✔ owner
 verified · ⊘ blocked (reason). Update the row in the same commit as
@@ -690,7 +730,8 @@ commit and a guide when each batch lands.
 - **Expiring URLs** mid-playback or mid-PDF: re-resolve and resume
   (R1 contract, tested in R3 and R5).
 - **Large files:** caps and virtualisation in R2, R5 and R6. The
-  numbers go in the README.
+  numbers go in the README. R2's are there: the screen's size at rest,
+  4096 pixels on the longest side when zoomed, 64 MB fetched.
 - **Where engines write:** `pdfrx` downloads and any player cache must
   land in the policy's cache or memory. Verify each engine in its
   phase.

@@ -23,6 +23,22 @@ class const MediaReaderStrings({
 
   /// On the card, when no engine shows this kind of file.
   final String notShown = 'This file cannot be shown here.',
+
+  /// On the card, when an engine could not open the file it was given.
+  final String failed = 'This file could not be opened.',
+
+  /// On the card, when the file did not arrive.
+  final String unreachable =
+      'This file could not be reached. Check the connection.',
+
+  /// On the card, when the file is larger than the engine takes.
+  final String tooLarge = 'This file is too large to show here.',
+
+  /// The card's button after a failure.
+  final String retry = 'Try again',
+
+  /// What a page says while its file is on the way.
+  final String loading = 'Loading',
 });
 
 String _position(int position, int count) => '$position of $count';

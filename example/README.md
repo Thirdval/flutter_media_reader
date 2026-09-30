@@ -1,10 +1,15 @@
 # flutter_media_reader_example
 
 Runs flutter_media_reader on iOS, Android, macOS, Windows and Linux
-with sample files of every kind. It grows with the plan: from R1 the
-samples open in the reader, under a host's chrome or the package's
-plain defaults, with export on or off. No engine exists before R2, so
-every kind shows its card.
+with sample files of every kind. The samples open in the reader, under
+a host's chrome or the package's plain defaults, with export on or
+off. It grows with the plan: a kind gets a bundled sample when its
+engine arrives, and shows its card until then.
+
+The bundled samples are served by a small server inside the app, on
+the device's loopback: it signs URLs that expire, honours byte ranges
+and refuses what is expired, as a host's CDN would. The example needs
+no network and no account.
 
 ```sh
 fvm flutter run -d <device>

@@ -7,7 +7,7 @@ sealed class const MediaReaderCache() {
   /// Nowhere: every showing fetches again.
   const factory none() = MediaReaderNoCache;
 
-  /// In memory, for as long as the reader is open.
+  /// In memory, never on disk.
   const factory memory() = MediaReaderMemoryCache;
 
   /// In a directory the host owns (per account, cleared on sign-out).

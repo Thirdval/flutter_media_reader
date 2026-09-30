@@ -2,7 +2,9 @@
 library;
 
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_media_reader/flutter_media_reader.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -127,20 +129,29 @@ Future<void> pumpReader(
   ValueChanged<MediaReaderItem>? onItemShown,
   bool autofocus = true,
   TextDirection textDirection = TextDirection.ltr,
+
+  /// The device's touch slop, where it reports one: a phone's is about
+  /// half of Flutter's own.
+  double? touchSlop,
 }) => tester.pumpWidget(
   WidgetsApp(
     color: const Color(0xFF000000),
-    builder: (context, _) => Directionality(
-      textDirection: textDirection,
-      child: MediaReaderView(
-        items: items,
-        initialIndex: initialIndex,
-        chrome: chrome,
-        policy: policy,
-        engines: engines,
-        onDismissed: onDismissed,
-        onItemShown: onItemShown,
-        autofocus: autofocus,
+    builder: (context, _) => MediaQuery(
+      data: MediaQuery.of(
+        context,
+      ).copyWith(gestureSettings: DeviceGestureSettings(touchSlop: touchSlop)),
+      child: Directionality(
+        textDirection: textDirection,
+        child: MediaReaderView(
+          items: items,
+          initialIndex: initialIndex,
+          chrome: chrome,
+          policy: policy,
+          engines: engines,
+          onDismissed: onDismissed,
+          onItemShown: onItemShown,
+          autofocus: autofocus,
+        ),
       ),
     ),
   ),
@@ -163,4 +174,87 @@ Future<void> swipeToNext(WidgetTester tester) async {
 Future<void> swipeToPrevious(WidgetTester tester) async {
   await tester.drag(find.byType(PageView), const Offset(500, 0));
   await tester.pumpAndSettle();
+}
+
+/// A transport that answers from [files], by the path of the URL, and
+/// remembers what it was asked.
+class FakeTransport([final Map<String, Uint8List> files = const {}])
+    implements MediaReaderTransport {
+  /// Every GET made, in order.
+  final List<({Uri uri, Map<String, String> headers, MediaReaderRange? range})>
+  requests = [];
+
+  /// The status for a URL, when it is not to be served: a refusal, a
+  /// missing file. Null serves the file.
+  int? Function(Uri uri)? status;
+
+  /// Thrown by every GET while set: the network is down.
+  Exception? failure;
+
+  /// Whether the server honours ranges; when not, it sends the whole
+  /// file with a 200.
+  bool ranges = true;
+
+  @override
+  Future<MediaReaderResponse> get(
+    Uri uri, {
+    Map<String, String> headers = const {},
+    MediaReaderRange? range,
+  }) async {
+    requests.add((uri: uri, headers: headers, range: range));
+    if (failure case final failure?) throw failure;
+    final refused = status?.call(uri);
+    if (refused != null) {
+      return MediaReaderResponse(status: refused, body: const Stream.empty());
+    }
+    final file = files[uri.path];
+    if (file == null) {
+      return const MediaReaderResponse(status: 404, body: Stream.empty());
+    }
+    if (range == null || !ranges) {
+      return MediaReaderResponse(
+        status: 200,
+        body: Stream.value(file),
+        length: file.length,
+      );
+    }
+    final end = switch (range.end) {
+      final end? when end < file.length => end + 1,
+      _ => file.length,
+    };
+    final part = Uint8List.sublistView(file, range.start, end);
+    return MediaReaderResponse(
+      status: 206,
+      body: Stream.value(part),
+      length: part.length,
+      total: file.length,
+    );
+  }
+}
+
+/// A PNG of one colour, [width] by [height] pixels.
+Future<Uint8List> pngOf(WidgetTester tester, int width, int height) async {
+  final bytes = await tester.runAsync(() async {
+    final recorder = ui.PictureRecorder();
+    ui.Canvas(recorder).drawRect(
+      ui.Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+      ui.Paint()..color = const ui.Color(0xFF2266AA),
+    );
+    final image = await recorder.endRecording().toImage(width, height);
+    final data = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return data!.buffer.asUint8List();
+  });
+  return bytes!;
+}
+
+/// Pumps, letting real time pass between frames (an image decodes, a
+/// file is read), until [done] or for a second.
+Future<void> pumpUntil(WidgetTester tester, bool Function() done) async {
+  for (var tries = 0; tries < 100 && !done(); tries++) {
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+    await tester.pump();
+  }
 }

@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- The example serves its samples from a loopback server inside the
+         app, and the reader fetches them from it. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="flutter_media_reader_example"
         android:name="${applicationName}"

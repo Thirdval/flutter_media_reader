@@ -102,6 +102,12 @@ final class MediaReaderPage({
     if (!_disposed) _failure.value = reason;
   }
 
+  /// Lets the engine try again after a failure: the card gives way to a
+  /// fresh start of the engine. The card's own "Try again" calls this.
+  void retry() {
+    if (!_disposed) _failure.value = null;
+  }
+
   /// Where the shown file is, for a remote source: the kept location
   /// while it is valid, a fresh one otherwise.
   ///
@@ -170,10 +176,5 @@ final class const MediaReaderPageBinding(final MediaReaderPage page) {
   /// Whether the page is the one on screen.
   set current(bool value) {
     if (!page._disposed) page._current.value = value;
-  }
-
-  /// Lets the engine try again: the card gives way to it.
-  void clearFailure() {
-    if (!page._disposed) page._failure.value = null;
   }
 }

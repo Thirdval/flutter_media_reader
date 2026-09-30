@@ -49,13 +49,12 @@ void main() {
       expect(showing.item, same(glb));
     });
 
-    test('before R2 the standard registry shows every file as its card', () {
-      for (final name in ['a.jpg', 'b.mp4', 'c.pdf', 'd.txt', 'e.zip']) {
-        expect(
-          MediaReaderEngines.standard.select(item(name), anywhere).engine,
-          MediaReaderEngines.card,
-        );
-      }
+    test('the standard registry leaves a file it has no engine for to the '
+        'card', () {
+      expect(
+        MediaReaderEngines.standard.select(item('model.glb'), anywhere).engine,
+        MediaReaderEngines.card,
+      );
     });
 
     test('a preview is shown by its own kind\'s engine', () {

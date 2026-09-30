@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 
 import '../item/media_reader_item.dart';
 import '../shell/media_reader_page.dart';
+import '../shell/plain_widgets.dart';
 import 'media_reader_engine.dart';
 
 /// Shows any file as its card: its name, kind and size, why it is not
@@ -68,10 +69,26 @@ class const _Card({
               const SizedBox(height: 16),
               ValueListenableBuilder(
                 valueListenable: page.failure,
-                builder: (context, failure, _) => Text(
-                  failure ?? strings.notShown,
-                  textAlign: TextAlign.center,
-                  style: faint,
+                builder: (context, failure, _) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      failure ?? strings.notShown,
+                      textAlign: TextAlign.center,
+                      style: faint,
+                    ),
+                    // An engine failed: it may do better on another try.
+                    // Where no engine shows the file, there is nothing to
+                    // try again.
+                    if (failure != null) ...[
+                      const SizedBox(height: 16),
+                      MediaReaderPlainButton(
+                        label: strings.retry,
+                        onPressed: page.retry,
+                        chrome: chrome,
+                      ),
+                    ],
+                  ],
                 ),
               ),
               if (chrome.cardActions case final actions?) ...[

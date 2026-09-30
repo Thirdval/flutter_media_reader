@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../item/media_reader_item.dart';
 import 'media_reader_card_engine.dart';
 import 'media_reader_engine.dart';
+import 'picture/picture_engine.dart';
 
 /// What the registry chose for a file: the engine, and the item it is
 /// built with — the host's own, or its preview read as an item.
@@ -14,9 +15,11 @@ typedef MediaReaderShowing = ({MediaReaderEngine engine, MediaReaderItem item});
 
 /// An ordered list of engines.
 class const MediaReaderEngines(final List<MediaReaderEngine> _engines) {
-  /// The package's own engines. There are none before R2: every file
-  /// shows its card.
-  static const MediaReaderEngines standard = MediaReaderEngines([]);
+  /// The package's own engines, in the order they are asked. A kind
+  /// without an engine yet shows its card.
+  static const MediaReaderEngines standard = MediaReaderEngines([
+    MediaReaderPictureEngine(),
+  ]);
 
   /// The file's card. It is not in the list: it is what [select] falls
   /// back to, so every file has something to show.
