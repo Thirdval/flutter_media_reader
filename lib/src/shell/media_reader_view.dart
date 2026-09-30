@@ -18,6 +18,7 @@ import '../item/media_reader_source.dart';
 import 'chrome_layer.dart';
 import 'dismissible.dart';
 import 'media_reader_chrome.dart';
+import 'media_reader_document.dart';
 import 'media_reader_page.dart';
 import 'media_reader_playback.dart';
 import 'page_host.dart';
@@ -47,6 +48,11 @@ class const MediaReaderView({
   /// neighbour being prepared is not on screen.
   final ValueChanged<MediaReaderItem>? onItemShown,
 
+  /// A link in a file was followed: a web address in a PDF. The host
+  /// decides what becomes of it; the reader opens nothing itself (MR8).
+  /// Left null, links do nothing and are not marked as links.
+  final ValueChanged<Uri>? onLink,
+
   /// Whether the reader takes the keyboard when it appears. A pane beside
   /// a text field leaves it false.
   final bool autofocus = true,
@@ -71,6 +77,9 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
   /// What plays on the page on screen: the slots are rebuilt when it
   /// comes or goes, and the transport follows its state by itself.
   final ValueNotifier<MediaReaderPlayback?> _playback = ValueNotifier(null);
+
+  /// The document on the page on screen, in the same way.
+  final ValueNotifier<MediaReaderDocument?> _document = ValueNotifier(null);
   final Map<String, MediaReaderPage> _pages = {};
   final Map<(String, bool), MediaReaderResolver> _resolvers = {};
   MediaReaderPage? _watched;
@@ -107,25 +116,33 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
   void _watch() {
     final page = widget.items.isEmpty ? null : _pages[widget.items[_index].id];
     if (identical(page, _watched)) return;
-    _watched?.status.removeListener(_onStatus);
-    _watched?.playback.removeListener(_onStatus);
-    _watched?.holdsPaging.removeListener(_onHold);
-    _watched?.holdsDismiss.removeListener(_onHold);
+    _unwatch();
     _watched = page;
     page?.status.addListener(_onStatus);
     page?.playback.addListener(_onStatus);
+    page?.document.addListener(_onStatus);
     page?.holdsPaging.addListener(_onHold);
     page?.holdsDismiss.addListener(_onHold);
     _onStatus();
   }
 
-  /// The page on screen has another status, or something else playing.
+  void _unwatch() {
+    _watched?.status.removeListener(_onStatus);
+    _watched?.playback.removeListener(_onStatus);
+    _watched?.document.removeListener(_onStatus);
+    _watched?.holdsPaging.removeListener(_onHold);
+    _watched?.holdsDismiss.removeListener(_onHold);
+  }
+
+  /// The page on screen has another status, or something else to control.
   void _onStatus() {
     final status = _watched?.status.value;
     final playback = _watched?.playback.value;
+    final document = _watched?.document.value;
     _whenNotBuilding(() {
       _status.value = status;
       _playback.value = playback;
+      _document.value = document;
     });
   }
 
@@ -222,16 +239,14 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
 
   @override
   void dispose() {
-    _watched?.status.removeListener(_onStatus);
-    _watched?.playback.removeListener(_onStatus);
-    _watched?.holdsPaging.removeListener(_onHold);
-    _watched?.holdsDismiss.removeListener(_onHold);
+    _unwatch();
     _pager.dispose();
     _focus.dispose();
     _chromeVisible.dispose();
     _dismissing.dispose();
     _status.dispose();
     _playback.dispose();
+    _document.dispose();
     super.dispose();
   }
 
@@ -313,6 +328,7 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
                         engines: widget.engines,
                         chromeVisible: _chromeVisible,
                         close: close,
+                        onLink: widget.onLink,
                         resolverFor: _resolverFor,
                         onAttached: _attach,
                         onDetached: _detach,
@@ -324,7 +340,11 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
                   visible: _chromeVisible,
                   dismissing: _dismissing,
                   child: ListenableBuilder(
-                    listenable: Listenable.merge([_status, _playback]),
+                    listenable: Listenable.merge([
+                      _status,
+                      _playback,
+                      _document,
+                    ]),
                     builder: (context, _) => MediaReaderChromeSlots(
                       chrome: chrome,
                       state: MediaReaderState(
@@ -334,6 +354,7 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
                         policy: widget.policy,
                         status: _status.value,
                         playback: _playback.value,
+                        document: _document.value,
                         close: close,
                       ),
                     ),

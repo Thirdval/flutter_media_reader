@@ -1,3 +1,32 @@
+## 0.5.0 — 2026-09-30
+
+Phase R5, PDF (MEDIA_READER_PLAN.md):
+
+- `MediaReaderPdfEngine`, on `pdfrx` (PDFium): continuous pages fitted
+  to the width, zoom, the page on screen as the status, links inside
+  the document, and the keys for a document.
+- A remote PDF is read by ranges through the package's own fetcher, as
+  PDFium asks for its parts: the first page is up before the rest has
+  come, and the location is the page's, renewed when refused.
+  `MediaReaderFetcher.fetchRange` hands over a whole file when the
+  server ignores ranges.
+- The ranges are kept where the policy says: in memory while the file
+  is open, in memory between showings, or in the host's directory.
+  `MediaReaderCache.clearMemory()` lets go of what memory holds.
+- `MediaReaderDocument`: what a page with pages of its own shows, for
+  the chrome's controls: the page on screen, go to a page, a page
+  drawn small, search. The plain default is a strip of pages with a
+  field for a page's number, and a search field.
+- Selected text has a menu of Copy and Select all, and nothing else.
+  Copying stays allowed with export off.
+- `onLink` on `showMediaReader` and `MediaReaderView`: a web address in
+  a file is handed to the host, and the reader opens nothing itself.
+- A host hook for a protected PDF's password.
+- `MediaReaderChrome.contentInsets`: the room the chrome takes, which a
+  page that scrolls keeps clear. The plain title has a plate, to be
+  read over a white page.
+- The example shows a PDF of 300 pages and a protected one.
+
 ## 0.4.0 — 2026-09-30
 
 Phase R4, audio and the waveform (MEDIA_READER_PLAN.md):

@@ -98,7 +98,7 @@ void main() {
       expect(engines.select(heic, TargetPlatform.iOS).item, same(heic));
     });
 
-    test('a file with a preview no engine shows is its card', () {
+    test('an Office file is shown through the PDF made of it', () {
       final docx = item(
         'Minutes.docx',
         preview: MediaReaderPreview(
@@ -109,8 +109,25 @@ void main() {
 
       final showing = MediaReaderEngines.standard.select(docx, anywhere);
 
+      expect(showing.engine.id, 'pdf');
+      expect(showing.item.kind, MediaKind.pdf);
+      // Under the file's own id: its page and its kept location follow it.
+      expect(showing.item.id, docx.id);
+    });
+
+    test('a file with a preview no engine shows is its card', () {
+      final model = item(
+        'Font.blend',
+        preview: MediaReaderPreview(
+          source: MediaReaderSource.bytes(Uint8List(1)),
+          contentType: 'model/gltf-binary',
+        ),
+      );
+
+      final showing = MediaReaderEngines.standard.select(model, anywhere);
+
       expect(showing.engine, MediaReaderEngines.card);
-      expect(showing.item, same(docx));
+      expect(showing.item, same(model));
     });
   });
 

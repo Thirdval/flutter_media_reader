@@ -1,6 +1,6 @@
 /// The few plain widgets the reader draws itself, where no host widget
-/// stands and no icon font or design system can be assumed: a button and
-/// a busy ring.
+/// stands and no icon font or design system can be assumed: buttons, a
+/// busy ring, and the glyphs on them.
 library;
 
 import 'dart:math' as math;
@@ -152,6 +152,11 @@ enum MediaReaderGlyph() {
   pause,
   sound,
   muted,
+  search,
+  pages,
+  up,
+  down,
+  close,
 }
 
 /// A round button with a drawn glyph: no icon font is assumed.
@@ -224,7 +229,8 @@ class const _GlyphPainter(final MediaReaderGlyph glyph, final Color colour)
       ..color = colour
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
     final c = size.center(Offset.zero);
     switch (glyph) {
       case MediaReaderGlyph.play:
@@ -282,6 +288,42 @@ class const _GlyphPainter(final MediaReaderGlyph glyph, final Color colour)
               stroke,
             );
         }
+      case MediaReaderGlyph.search:
+        // A lens and its handle.
+        final lens = c.translate(-1.5, -1.5);
+        canvas
+          ..drawCircle(lens, 5.5, stroke)
+          ..drawLine(lens.translate(4, 4), lens.translate(9, 9), stroke);
+      case MediaReaderGlyph.pages:
+        // A sheet, and the edge of the one behind it.
+        canvas
+          ..drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromLTWH(c.dx - 7.5, c.dy - 5.5, 11, 14),
+              const Radius.circular(2),
+            ),
+            stroke,
+          )
+          ..drawPath(
+            Path()
+              ..moveTo(c.dx - 3.5, c.dy - 8.5)
+              ..lineTo(c.dx + 7.5, c.dy - 8.5)
+              ..lineTo(c.dx + 7.5, c.dy + 5.5),
+            stroke,
+          );
+      case MediaReaderGlyph.up || MediaReaderGlyph.down:
+        final tip = glyph == MediaReaderGlyph.up ? -2.5 : 2.5;
+        canvas.drawPath(
+          Path()
+            ..moveTo(c.dx - 5, c.dy - tip)
+            ..lineTo(c.dx, c.dy + tip)
+            ..lineTo(c.dx + 5, c.dy - tip),
+          stroke,
+        );
+      case MediaReaderGlyph.close:
+        canvas
+          ..drawLine(c.translate(-5, -5), c.translate(5, 5), stroke)
+          ..drawLine(c.translate(-5, 5), c.translate(5, -5), stroke);
     }
   }
 

@@ -4,12 +4,12 @@
 /// never leave the app: exporting is the host's action, under the
 /// host's policy.
 ///
-/// Pre-release: phase R4 of MEDIA_READER_PLAN.md. The reader's shell and
+/// Pre-release: phase R5 of MEDIA_READER_PLAN.md. The reader's shell and
 /// its host contract are here — `showMediaReader` and [MediaReaderView],
 /// items and their sources, the policy, the chrome's slots, and the
-/// registry of engines — with the engines for pictures, video and
-/// audio, and [MediaReaderAudioBar] for a voice note in a chat. The
-/// other kinds arrive phase by phase; until then they show their card.
+/// registry of engines — with the engines for pictures, video, audio and
+/// PDF, and [MediaReaderAudioBar] for a voice note in a chat. The other
+/// kinds arrive phase by phase; until then they show their card.
 library;
 
 export 'src/engine/audio/audio_bar.dart';
@@ -20,6 +20,7 @@ export 'src/engine/audio/audio_player.dart'
 export 'src/engine/media_reader_card_engine.dart';
 export 'src/engine/media_reader_engine.dart';
 export 'src/engine/media_reader_engines.dart';
+export 'src/engine/pdf/pdf_engine.dart';
 export 'src/engine/picture/picture_engine.dart';
 export 'src/engine/video/video_engine.dart';
 export 'src/io/media_reader_fetcher.dart';
@@ -30,6 +31,7 @@ export 'src/item/media_reader_resolver.dart';
 export 'src/item/media_reader_source.dart';
 export 'src/media_kind.dart';
 export 'src/shell/media_reader_chrome.dart';
+export 'src/shell/media_reader_document.dart';
 export 'src/shell/media_reader_page.dart' show MediaReaderPage;
 export 'src/shell/media_reader_playback.dart';
 export 'src/shell/media_reader_strings.dart';

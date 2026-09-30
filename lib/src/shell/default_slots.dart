@@ -14,26 +14,37 @@ class const MediaReaderDefaultTitle({
   required final MediaReaderChrome chrome,
   super.key,
 }) extends StatelessWidget {
+  // On a plate of the canvas's colour: a page of a document is often
+  // white, and the name must be read over it.
   @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        state.item.name,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      if (state.count > 1)
-        Text(
-          chrome.strings.position(state.index + 1, state.count),
-          style: TextStyle(
-            color: chrome.foreground.withValues(alpha: 0.7),
-            fontSize: 13,
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: ShapeDecoration(
+      color: chrome.background.withValues(alpha: 0.6),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            state.item.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
-        ),
-    ],
+          if (state.count > 1)
+            Text(
+              chrome.strings.position(state.index + 1, state.count),
+              style: TextStyle(
+                color: chrome.foreground.withValues(alpha: 0.7),
+                fontSize: 13,
+              ),
+            ),
+        ],
+      ),
+    ),
   );
 }
 

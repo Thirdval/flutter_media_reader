@@ -29,6 +29,10 @@ void main() {
       expect(strings.page('Rota.pdf', 1, 1), 'Rota.pdf');
     });
 
+    test('a page of a document is called by its number', () {
+      expect(strings.pageNumber(3), 'Page 3');
+    });
+
     test('a host passes its own words', () {
       final french = MediaReaderStrings(
         close: 'Fermer',

@@ -81,7 +81,7 @@ host (Tendvine) lends:
 - R0 scaffold (built).
 - R1 the core and the shell (built).
 - R2–R6 one kind of file each: pictures (built), video (built), audio
-  with waveform (built), PDF, text/tables/archives.
+  with waveform (built), PDF (built), text/tables/archives.
 - R7 Office and HEIC through the host's derivatives.
 - R8 platform polish.
 - R9 Tendvine adopts it (in its own session, in four steps, the first
@@ -183,6 +183,7 @@ Future<void> showMediaReader(
   MediaReaderPolicy policy = const MediaReaderPolicy(), // export, cache
   MediaReaderEngines engines = MediaReaderEngines.standard,
   ValueChanged<MediaReaderItem>? onItemShown, // on screen, not prepared
+  ValueChanged<Uri>? onLink, // a link in a file: the host's to open (R5)
 });
 
 // The same reader as a widget, for a pane. Rebuilt with another list,
@@ -242,9 +243,10 @@ class const MediaReaderPolicy({
 class const MediaReaderChrome({
   // Each slot: Widget Function(BuildContext, MediaReaderState).
   topStart, topEnd, bottomStart, bottomEnd, contextPill, status,
-  controls, // the transport for what plays (R3)
+  controls, // for what plays (R3), or for a document (R5)
   cardActions, // the host's actions on a file's card
   background, foreground,
+  contentInsets, // the room the slots take: a page that scrolls keeps it clear (R5)
   strings, // the words the package draws or speaks
 });
 
@@ -253,6 +255,7 @@ class const MediaReaderState({
   item, index, count, policy, // and canExport
   status, // the engine's own
   playback, // what plays on the page, for the controls (R3)
+  document, // the document on the page, for the controls (R5)
   close, // null where the reader cannot be closed
 });
 
@@ -273,6 +276,9 @@ final class MediaReaderPage {
   ValueListenable<bool> get chromeVisible;
   final ValueNotifier<String?> status; // "1 of 15", a time
   final ValueNotifier<MediaReaderPlayback?> playback; // R3
+  final ValueNotifier<MediaReaderDocument?> document; // R5
+  bool get opensLinks; // whether the host takes links (R5)
+  void openLink(Uri link); // to the host's onLink, and nowhere else
   final ValueNotifier<bool> holdsPaging; // it owns sideways drags
   final ValueNotifier<bool> holdsDismiss; // and downward ones
   Future<MediaReaderLocation> resolve(); // the kept location
@@ -283,6 +289,10 @@ final class MediaReaderPage {
 
 // What plays: its state, and play, pause, seekTo, setSpeed, setMuted.
 abstract interface class MediaReaderPlayback() { ... }
+
+// A document: the page on screen and the count, goToPage, a page drawn
+// small (thumbnail), and search with nextMatch and previousMatch (R5).
+abstract interface class MediaReaderDocument() { ... }
 ```
 
 What R1 settled beyond the sketch it started from:
@@ -371,7 +381,8 @@ Also exported for hosts:
 | MR14 | Tests: unit and widget tests with fake engines and sources; each adapter behind its interface; a manual platform matrix in the tracker; no goldens until the chrome settles | Recommended |
 
 The owner accepts or overrides each Recommended row; the session
-records the answer here. MR7's answer and the copy clause in MR9,
+records the answer here. MR5 was built on `pdfrx` as recommended, but
+not on `PdfViewer.uri`: R5 says why. MR7's answer and the copy clause in MR9,
 for PDFs, reached this session through Tendvine's backend session on
 2026-09-30. The owner widened the clause to every kind of file in this
 session the same day.
@@ -591,7 +602,7 @@ session the same day.
     nothing yet.
 - **Left for later phases:** the keyboard for play and seek (R8).
 
-### R5 — PDF (M)
+### R5 — PDF (M) · built
 
 - **Engine:** `pdfrx`, from a URI (headers, range access, progressive
   loading), bytes or a file.
@@ -608,6 +619,65 @@ session the same day.
   or memory (check its cache hook).
 - **Done when:** a 300-page PDF opens progressively and search finds
   text. Nothing is written outside the policy's cache.
+- **Built (2026-09-30):**
+  - `MediaReaderPdfEngine` on `pdfrx` 2.6 (PDFium), which is MR5 as
+    recommended: the row still waits for the owner. One thing differs
+    from the row and from the sketch above: the engine does not hand
+    `pdfrx` the URL. It reads a remote file by ranges itself, through
+    the package's fetcher, and gives `pdfrx` the bytes
+    (`PdfDocument.openCustom`). So the location is the page's, kept
+    and renewed as for every other kind; nothing goes to `pdfrx`'s own
+    download cache; and a signed URL is never in `pdfrx`'s log lines;
+  - ranges of 256 KB. The first page is up after two of them, the
+    file's first and its last. A test holds the middle of a file back
+    and the first page still shows. On both devices the example's
+    rota, 300 pages in 1.8 MB, opened by ranges on one signature, and
+    went to page 300 by its number;
+  - the ranges are kept where the policy says: held while the file is
+    open (none), between showings up to 64 MB for the app (memory), or
+    in two files named after the item's id in the host's directory.
+    With export off nothing is on disk. The tests read the host's
+    directory and `pdfrx`'s own, which stays empty;
+  - a range that stalls is given up on after a minute, and closing the
+    page fails a waiting read at once: PDFium has one thread for every
+    document, so one stalled read would hold up every PDF;
+  - the contract grew (§2.2): `MediaReaderDocument` on the page and in
+    the slots' state; `onLink`; `contentInsets`, so that a PDF's first
+    page starts below the top slots; the plain title has a plate, to
+    be read over a white page;
+  - the plain controls for a document: a strip of pages drawn small
+    with a field for a page's number, and a search that says "2 of 17"
+    and steps through the matches. On both devices "Harvest supper"
+    was found on three of the rota's 300 pages;
+  - selected text has a menu of Copy and Select all and nothing else,
+    and is copied with export off too (MR9);
+  - a link to a place in the document goes there. A web address goes
+    to the host's `onLink`, and without one is not a link;
+  - a host hook for a password, asked again while the answer is wrong.
+    A PDF that stays locked shows its card;
+  - the poster: the engine draws any page small (`thumbnail`), the
+    first among them. The server makes none (owner, 2026-09-30);
+  - 395 tests. The PDF tests run the real PDFium, the library
+    `flutter test` builds for the host, on PDFs made on the spot, one
+    of them protected.
+- **`url_launcher` comes with `pdfrx`.** It is there for the banner
+  `pdfrx` shows when a document fails, which links to a web page. The
+  engine replaces that banner, so nothing in this package reaches the
+  plugin; but a host's app links it. Two tests guard this: one fails
+  if a viewer is built with the default banner, the other if any
+  other hand-off package arrives with a dependency (MR8, §7).
+- **Not run:** iOS (the owner runs iOS builds); Windows and Linux (no
+  machine); a screen reader over a PDF's text, which `pdfrx` exposes
+  when one is on.
+- **Known limits, left for R8:**
+  - a drag down scrolls a PDF and does not dismiss it: the close
+    button and Esc do;
+  - a sideways drag over a PDF at its width goes between files when it
+    starts as a finger does, from rest. A jump of more than twice the
+    touch slop in one step is taken by the page;
+  - a match gone to by the search, or a page reached with Page Down,
+    may come under the top slots until the chrome is tapped away;
+  - the outline (bookmarks) is not shown.
 
 ### R6 — Text, tables, archives (M)
 
@@ -693,8 +763,8 @@ In every step:
 | R1 | Core and shell: items, sources, policy, registry, pager, chrome slots, the card engine | ☑ built 2026-09-30 — analyze clean, 117 tests, example run on Android and macOS | `d2c235e`; tag `v0.1.0` when the owner asks | ☐ |
 | R2 | Pictures | ☑ built 2026-09-30 — analyze clean, 182 tests, example run on Android and macOS | `c6ba3f5`; tag `v0.2.0` when the owner asks | ☐ |
 | R3 | Video (`video_player` + `fvp`) | ☑ built 2026-09-30 — analyze clean, 225 tests, example run on Android and macOS | `ea38e36`; tag `v0.3.0` when the owner asks | ☐ |
-| R4 | Audio and waveform, `MediaReaderAudioBar` | ☑ built 2026-09-30 — analyze clean, 304 tests, example run on Android and macOS | the 0.4.0 commit; tag `v0.4.0` when the owner asks | ☐ |
-| R5 | PDF (`pdfrx`) | ☐ | | ☐ |
+| R4 | Audio and waveform, `MediaReaderAudioBar` | ☑ built 2026-09-30 — analyze clean, 304 tests, example run on Android and macOS | `9bbd4b5`; tag `v0.4.0` when the owner asks | ☐ |
+| R5 | PDF (`pdfrx`) | ☑ built 2026-09-30 — analyze clean, 395 tests, example run on Android and macOS | the 0.5.0 commit; tag `v0.5.0` when the owner asks | ☐ |
 | R6 | Text, Markdown, tables, archives | ☐ | | ☐ |
 | R7 | Derivatives: Office and HEIC through the host | ☐ | | ☐ |
 | R8 | Platform polish, accessibility, Live Text decision | ☐ | | ☐ |
@@ -710,6 +780,7 @@ In every step:
 | R2 | – | ✓ | ✓ | – | – |
 | R3 | – | ✓ | ✓ | – | – |
 | R4 | – | ✓ | ✓ | – | – |
+| R5 | – | ✓ | ✓ | – | – |
 
 Each ✓ is the example's integration test, run on a Pixel 10a with
 Android 17 and on macOS 27. iOS was not run: the owner runs iOS
@@ -728,6 +799,11 @@ builds. Windows and Linux were not run: no machine.
   file; an Ogg as it is on Android and through its MP3 on macOS; a
   voice note shared between its bubble and the reader; a URL renewed
   under a paused MP3; a video that starts stopping the voice note.
+- R5: twenty-two tests. A PDF of 300 pages opened by ranges and gone
+  to its last page by number; a search through every page; the pages
+  scrolled by a drag and the next file reached by a drag sideways; a
+  protected PDF opened with the host's password, and left locked; a
+  link handed to the host.
 
 Legend: ☐ not started · ◐ in progress · ☑ done (commit) · ✔ owner
 verified · ⊘ blocked (reason). Update the row in the same commit as
@@ -758,6 +834,14 @@ works in this order: B5, the repair of old rows (posters, voice notes
 that show 0:00), B1, B3, HEIC (B4), B2. Its session announces the
 commit and a guide when each batch lands.
 
+Later the same day Tendvine's app session reported all five live on
+staging, with a guide for hosts:
+`tendvine/docs/media_reader_integration.md`. Checked from this
+repository's session: the guide, and that the commits it names are in
+the backend repository (`2bc0b819`, `197f0d86`, `159da9e0`,
+`19e69f44`, `dad7afc5`). Not run from here: any request against
+staging.
+
 - **B1 — Peaks and duration.** For audio and video, computed at upload
   and returned with the file. This also mends voice notes that show
   0:00.
@@ -765,12 +849,18 @@ commit and a guide when each batch lands.
     decimals, and null until the file is processed; `durationSeconds`
     comes beside it.
   - Both are on the attachment, the list item and the resolve.
-  - Status: the next backend batch, after the repair of old rows.
+  - Status: reported live on staging (`197f0d86`, `dad7afc5`), with
+    the old rows repaired. They also come with the room's
+    `attachment.updated` push when processing ends.
 - **B2 — A PDF derivative for Office files** (Word, Excel, PowerPoint,
   OpenDocument, RTF), resolved like thumbnails, with "preparing" and
   "failed" states.
   - Decided: a separate converter container makes it (MR7).
-  - Status: last in the backend's order.
+  - Status: reported live on staging (`159da9e0`). The variant is
+    `pdf`, for ten formats, up to 50 MB, and it answers ranges. Its
+    state is `derivatives.pdf`: `ready`, `preparing`, `failed` or
+    `none`. A failed conversion is not tried again on its own. R7
+    shows those states.
 - **B3 — The community download policy.**
   - Agreed shape: a new permission, `files:export`, on in every role
     by default; `canExport` on the member's capabilities and on each
@@ -780,14 +870,18 @@ commit and a guide when each batch lands.
   - The CDN already accepts a signed disposition
     (`&disp=inline|attachment`); the backend starts sending it with
     B3.
-  - Status: the next backend batch, after B1.
+  - Status: reported live on staging (`197f0d86`). The package's
+    policy takes the one bool, `canExport`; the intent and the refusal
+    (`File.ExportNotAllowed`) stay on the host's side.
 - **B4 — Derivatives the reader relies on:** video posters, and a JPEG
   `display` variant of each HEIC/HEIF (decided; R7 relies on it), all
   actually served.
   - Not PDF previews: the server makes no PDF thumbnails, and the
     reader draws a PDF's first page itself (R5).
-  - Status: old posters are repaired in the next batch; HEIC comes
-    after B3.
+  - Status: reported live on staging (`159da9e0`). The `display`
+    variant is a JPEG of at most 2560 pixels for HEIC, HEIF, AVIF and
+    TIFF, with `derivatives.display` as its state. A variant that was
+    never made is no longer signed.
 - **B5 — Range requests** on signed URLs, for streaming, seeking and
   PDF range access.
   - Status: live on staging since 2026-09-30 (backend commit
@@ -835,7 +929,15 @@ commit and a guide when each batch lands.
   4096 pixels on the longest side when zoomed, 64 MB fetched.
 - **Where engines write:** `pdfrx` downloads and any player cache must
   land in the policy's cache or memory. Verify each engine in its
-  phase.
+  phase. Since R5 `pdfrx` downloads nothing: the PDF engine reads the
+  file itself and keeps its ranges where the policy says, and the
+  tests read both directories.
+- **`url_launcher` in the host's app:** `pdfrx` depends on it for its
+  own error banner. The PDF engine never shows that banner, and no
+  code of this package reaches the plugin (R5, with two guard tests);
+  but the plugin is linked into every host. If that is not acceptable,
+  the ways out are a change upstream to make it optional, or a fork of
+  `pdfrx` without the banner: an owner decision.
 - **Copy and export:** settled by the owner on 2026-09-30. Copying
   text is not an export, in a PDF or any other kind of file, so it
   stays allowed under a no-download policy (MR9, R5, R6).

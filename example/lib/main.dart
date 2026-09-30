@@ -6,9 +6,9 @@ import 'package:flutter_media_reader/flutter_media_reader.dart';
 import 'host_chrome.dart';
 import 'samples.dart';
 
-/// The example grows with the plan. Pictures, videos and audio open in
-/// their engines, through a signed URL, a file or bytes in memory; a
-/// kind whose engine has not arrived shows its card.
+/// The example grows with the plan. Pictures, videos, audio and PDFs
+/// open in their engines, through a signed URL, a file or bytes in
+/// memory; a kind whose engine has not arrived shows its card.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(ExampleApp(files: await SampleFiles.load()));
@@ -40,6 +40,11 @@ class _SamplesPageState() extends State<SamplesPage> {
   late final MediaReaderItem _voice = widget.files.items.firstWhere(
     (item) => item.name == voiceNote,
   );
+
+  /// The package's engines, with the host's way to ask for a PDF's
+  /// password.
+  late final MediaReaderEngines _engines = MediaReaderEngines.standard
+      .withFirst([MediaReaderPdfEngine(password: _askPassword)]);
   bool _canExport = true;
   bool _hostChrome = true;
 
@@ -50,8 +55,38 @@ class _SamplesPageState() extends State<SamplesPage> {
       initialIndex: index,
       policy: MediaReaderPolicy(canExport: _canExport),
       chrome: _hostChrome ? hostChrome : const MediaReaderChrome(),
+      engines: _engines,
+      onLink: _onLink,
     ),
   );
+
+  /// A link in a file is the host's to open, or not. This host shows it.
+  void _onLink(Uri link) => unawaited(
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('A link in the file'),
+        content: Text(
+          '$link\n\nThe reader opens nothing itself: it hands the link to '
+          'the app.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  /// Asks for the password of a protected PDF, again while it is wrong.
+  Future<String?> _askPassword(MediaReaderItem item, int attempt) =>
+      showDialog<String>(
+        context: context,
+        builder: (context) =>
+            _PasswordDialog(name: item.name, again: attempt > 0),
+      );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -100,6 +135,52 @@ class _SamplesPageState() extends State<SamplesPage> {
         ),
       ],
     ),
+  );
+}
+
+/// The host's own dialog for a protected file's password.
+class const _PasswordDialog({
+  required final String name,
+
+  /// Whether the last password did not open the file.
+  required final bool again,
+}) extends StatefulWidget {
+  @override
+  State<_PasswordDialog> createState() => _PasswordDialogState();
+}
+
+class _PasswordDialogState() extends State<_PasswordDialog> {
+  final TextEditingController _password = TextEditingController();
+
+  @override
+  void dispose() {
+    _password.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.name),
+    content: TextField(
+      controller: _password,
+      autofocus: true,
+      obscureText: true,
+      decoration: InputDecoration(
+        labelText: 'Password',
+        errorText: widget.again ? 'That password did not open it.' : null,
+      ),
+      onSubmitted: (password) => Navigator.of(context).pop(password),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(_password.text),
+        child: const Text('Open'),
+      ),
+    ],
   );
 }
 

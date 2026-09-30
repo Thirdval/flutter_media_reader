@@ -63,17 +63,20 @@ class const MediaReaderFetcher([
   }
 
   /// Bytes [range] of the file. A server that ignores ranges answers
-  /// with the whole file, which is then cut to the range.
+  /// with the whole file, which is then cut to the range; [onWhole] is
+  /// handed all of it, for a caller that would otherwise ask again.
   Future<MediaReaderPart> fetchRange(
     MediaReaderPage page,
-    MediaReaderRange range,
-  ) async {
+    MediaReaderRange range, {
+    void Function(Uint8List whole)? onWhole,
+  }) async {
     final response = await _get(page, range);
     if (response.status == 206) {
       return (bytes: await _read(response), total: response.total);
     }
     if (response.status == 200) {
       final whole = await _read(response);
+      onWhole?.call(whole);
       final end = switch (range.end) {
         final end? when end < whole.length => end + 1,
         _ => whole.length,

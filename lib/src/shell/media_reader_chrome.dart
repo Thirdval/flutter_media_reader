@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 
 import '../item/media_reader_item.dart';
 import '../item/media_reader_policy.dart';
+import 'media_reader_document.dart';
 import 'media_reader_playback.dart';
 import 'media_reader_strings.dart';
 
@@ -27,6 +28,9 @@ class const MediaReaderState({
   /// What plays on the page, when its engine plays something: a video,
   /// an audio file.
   final MediaReaderPlayback? playback,
+
+  /// The document on the page, when its engine shows one: a PDF.
+  final MediaReaderDocument? document,
 
   /// Closes the reader. Null where it cannot be closed: a pane that is
   /// always there.
@@ -68,9 +72,10 @@ class const MediaReaderChrome({
   /// [MediaReaderState.status] while there is one.
   final MediaReaderSlotBuilder? status,
 
-  /// The transport for what plays: play and pause, the scrubber, the
-  /// time, speed and mute. By default, a plain bar while
-  /// [MediaReaderState.playback] is there.
+  /// The controls for what the page shows. For what plays
+  /// ([MediaReaderState.playback]): play and pause, the scrubber, the
+  /// time, speed and mute. For a document ([MediaReaderState.document]):
+  /// its pages and its search. By default, a plain bar for each.
   final MediaReaderSlotBuilder? controls,
 
   /// The host's actions on a file's card: save, share. Empty by default,
@@ -83,5 +88,12 @@ class const MediaReaderChrome({
   /// Text and glyphs on the canvas: the card, the plain defaults, and the
   /// default text style of the host's slots.
   final Color foreground = const Color(0xFFFFFFFF),
+
+  /// What a page that scrolls keeps clear at its top and at its bottom,
+  /// within the safe area: the room the chrome's slots take there. A
+  /// PDF's first page starts below the top slots, and its last page can
+  /// be brought above the bottom ones. The default suits the plain
+  /// chrome; a host whose slots are taller says so here.
+  final EdgeInsets contentInsets = const EdgeInsets.only(top: 56, bottom: 108),
   final MediaReaderStrings strings = const MediaReaderStrings(),
 });

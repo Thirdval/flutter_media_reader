@@ -10,6 +10,7 @@ import '../item/media_reader_policy.dart';
 import '../item/media_reader_resolver.dart';
 import '../item/media_reader_source.dart';
 import 'media_reader_chrome.dart';
+import 'media_reader_document.dart';
 import 'media_reader_playback.dart';
 
 /// One page of the reader, as its engine sees it.
@@ -26,6 +27,7 @@ final class MediaReaderPage({
   MediaReaderResolver? resolver,
   ValueNotifier<bool>? chromeVisible,
   VoidCallback? close,
+  ValueChanged<Uri>? onLink,
 }) {
   MediaReaderItem _item = item;
   int _index = index;
@@ -33,6 +35,7 @@ final class MediaReaderPage({
   MediaReaderPolicy _policy = policy;
   MediaReaderChrome _chrome = chrome;
   VoidCallback? _close = close;
+  ValueChanged<Uri>? _onLink = onLink;
   MediaReaderResolver? _resolver =
       resolver ??
       switch (item.source) {
@@ -55,6 +58,10 @@ final class MediaReaderPage({
   /// chrome's transport controls show its state and drive it. Null for a
   /// page that plays nothing.
   final ValueNotifier<MediaReaderPlayback?> playback = ValueNotifier(null);
+
+  /// The document on the page, once its engine shows one: the chrome's
+  /// controls show its pages and search it. Null for a page without one.
+  final ValueNotifier<MediaReaderDocument?> document = ValueNotifier(null);
 
   /// True while the engine owns sideways drags (a zoomed picture being
   /// panned): the shell stops paging on a drag.
@@ -96,8 +103,19 @@ final class MediaReaderPage({
     policy: _policy,
     status: status.value,
     playback: playback.value,
+    document: document.value,
     close: _close,
   );
+
+  /// Whether the host does something with a link. An engine marks a link
+  /// as one only then.
+  bool get opensLinks => _onLink != null;
+
+  /// A link in the file was followed. It is the host's to open, or not:
+  /// the reader opens nothing itself (MR8).
+  void openLink(Uri link) {
+    if (!_disposed) _onLink?.call(link);
+  }
 
   /// Hides the chrome, or brings it back: a tap on the canvas. An engine
   /// that takes taps itself calls this where a tap means the same.
@@ -152,6 +170,7 @@ final class MediaReaderPage({
     _disposed = true;
     status.dispose();
     playback.dispose();
+    document.dispose();
     holdsPaging.dispose();
     holdsDismiss.dispose();
     _current.dispose();
@@ -172,6 +191,7 @@ final class const MediaReaderPageBinding(final MediaReaderPage page) {
     required MediaReaderChrome chrome,
     required MediaReaderResolver? resolver,
     required VoidCallback? close,
+    required ValueChanged<Uri>? onLink,
   }) {
     page
       .._item = item
@@ -180,7 +200,8 @@ final class const MediaReaderPageBinding(final MediaReaderPage page) {
       .._policy = policy
       .._chrome = chrome
       .._resolver = resolver
-      .._close = close;
+      .._close = close
+      .._onLink = onLink;
   }
 
   /// Whether the page is the one on screen.

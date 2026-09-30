@@ -34,6 +34,9 @@ class const MediaReaderPageHost({
   required final MediaReaderEngines engines,
   required final ValueNotifier<bool> chromeVisible,
   required final VoidCallback? close,
+
+  /// What the host does with a link in a file; null when it does nothing.
+  required final ValueChanged<Uri>? onLink,
   required final MediaReaderResolverFor resolverFor,
 
   /// The page exists. Called while building: the shell notes it without
@@ -61,6 +64,7 @@ class _MediaReaderPageHostState() extends State<MediaReaderPageHost> {
       resolver: _resolver(),
       chromeVisible: widget.chromeVisible,
       close: widget.close,
+      onLink: widget.onLink,
     ),
   );
 
@@ -110,6 +114,7 @@ class _MediaReaderPageHostState() extends State<MediaReaderPageHost> {
         chrome: widget.chrome,
         resolver: _resolver(),
         close: widget.close,
+        onLink: widget.onLink,
       )
       ..current = widget.current;
   }

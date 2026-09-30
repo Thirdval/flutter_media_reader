@@ -48,6 +48,10 @@ final MediaReaderChrome hostChrome = MediaReaderChrome(
           'Saving and sharing are turned off in this community.',
           textAlign: TextAlign.center,
         ),
+  // The room these capsules take: a PDF's first page starts below the
+  // one at the top, and its last page can be brought above the ones at
+  // the bottom.
+  contentInsets: const EdgeInsets.only(top: 72, bottom: 212),
 );
 
 class const _Capsule({required final Widget child}) extends StatelessWidget {

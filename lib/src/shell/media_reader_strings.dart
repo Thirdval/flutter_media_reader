@@ -49,7 +49,32 @@ class const MediaReaderStrings({
 
   /// The speed button's label: "1.5×".
   final String Function(double speed) speed = _speed,
+
+  /// A document's controls: its strip of pages, and its search.
+  final String pages = 'Pages',
+  final String search = 'Search',
+
+  /// What the search field says while it is empty.
+  final String searchHint = 'Search in this file',
+  final String noMatches = 'No matches',
+  final String previousMatch = 'Previous match',
+  final String nextMatch = 'Next match',
+  final String endSearch = 'Close search',
+
+  /// The field a page's number is typed into, and a page by its number:
+  /// "Page 3".
+  final String goToPage = 'Go to page',
+  final String Function(int number) pageNumber = _pageNumber,
+
+  /// The menu over selected text.
+  final String copy = 'Copy',
+  final String selectAll = 'Select all',
+
+  /// On the card, when a file asks for a password the host did not give.
+  final String locked = 'This file is protected by a password.',
 });
+
+String _pageNumber(int number) => 'Page $number';
 
 String _speed(double speed) =>
     '${speed.toString().replaceFirst(RegExp(r'\.0$'), '')}×';

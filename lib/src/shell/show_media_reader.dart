@@ -25,6 +25,7 @@ Future<void> showMediaReader(
   MediaReaderPolicy policy = const MediaReaderPolicy(),
   MediaReaderEngines engines = MediaReaderEngines.standard,
   ValueChanged<MediaReaderItem>? onItemShown,
+  ValueChanged<Uri>? onLink,
   bool useRootNavigator = true,
 }) => Navigator.of(context, rootNavigator: useRootNavigator).push<void>(
   PageRouteBuilder<void>(
@@ -39,6 +40,7 @@ Future<void> showMediaReader(
       policy: policy,
       engines: engines,
       onItemShown: onItemShown,
+      onLink: onLink,
       onDismissed: () => unawaited(Navigator.of(context).maybePop()),
     ),
     transitionsBuilder: (context, animation, _, child) =>

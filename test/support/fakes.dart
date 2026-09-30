@@ -71,6 +71,30 @@ class _FakeEnginePageState() extends State<_FakeEnginePage> {
   }
 }
 
+/// A real engine, watched: the page it was last handed for each item.
+class WatchedEngine(final MediaReaderEngine _engine)
+    implements MediaReaderEngine {
+  /// The page each item was last built with, by the item's id.
+  final Map<String, MediaReaderPage> pages = {};
+
+  @override
+  String get id => _engine.id;
+
+  @override
+  bool canShow(MediaReaderItem item, TargetPlatform platform) =>
+      _engine.canShow(item, platform);
+
+  @override
+  Widget build(
+    BuildContext context,
+    MediaReaderItem item,
+    MediaReaderPage page,
+  ) {
+    pages[page.item.id] = page;
+    return _engine.build(context, item, page);
+  }
+}
+
 /// A host's resolve: counts its calls and answers each with a new URL.
 class FakeResolve({
   /// How long each answer is valid for; forever when null.
@@ -127,6 +151,7 @@ Future<void> pumpReader(
   MediaReaderEngines engines = MediaReaderEngines.standard,
   VoidCallback? onDismissed,
   ValueChanged<MediaReaderItem>? onItemShown,
+  ValueChanged<Uri>? onLink,
   bool autofocus = true,
   TextDirection textDirection = TextDirection.ltr,
 
@@ -150,6 +175,7 @@ Future<void> pumpReader(
           engines: engines,
           onDismissed: onDismissed,
           onItemShown: onItemShown,
+          onLink: onLink,
           autofocus: autofocus,
         ),
       ),
@@ -195,6 +221,10 @@ class FakeTransport([final Map<String, Uint8List> files = const {}])
   /// file with a 200.
   bool ranges = true;
 
+  /// Waited for before a GET is answered, when it gives something to
+  /// wait for: a slow part of a file.
+  Future<void>? Function(Uri uri, MediaReaderRange? range)? hold;
+
   @override
   Future<MediaReaderResponse> get(
     Uri uri, {
@@ -202,6 +232,7 @@ class FakeTransport([final Map<String, Uint8List> files = const {}])
     MediaReaderRange? range,
   }) async {
     requests.add((uri: uri, headers: headers, range: range));
+    await hold?.call(uri, range);
     if (failure case final failure?) throw failure;
     final refused = status?.call(uri);
     if (refused != null) {

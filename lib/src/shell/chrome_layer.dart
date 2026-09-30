@@ -7,6 +7,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter/widgets.dart';
 
 import 'default_slots.dart';
+import 'document_bar.dart';
 import 'media_reader_chrome.dart';
 import 'transport_bar.dart';
 
@@ -107,19 +108,21 @@ class const MediaReaderChromeSlots({
               ],
             ),
             const Spacer(),
-            _slot(
-              context,
-              MediaReaderOrder.controls,
-              chrome.controls,
-              switch (state.playback) {
-                null => null,
-                final playback => MediaReaderTransportBar(
-                  playback: playback,
-                  chrome: chrome,
-                  peaks: state.item.peaks,
-                ),
-              },
-            ),
+            _slot(context, MediaReaderOrder.controls, chrome.controls, switch ((
+              state.playback,
+              state.document,
+            )) {
+              (final playback?, _) => MediaReaderTransportBar(
+                playback: playback,
+                chrome: chrome,
+                peaks: state.item.peaks,
+              ),
+              (_, final document?) => MediaReaderDocumentBar(
+                document: document,
+                chrome: chrome,
+              ),
+              _ => null,
+            }),
             const SizedBox(height: 8),
             Center(
               child: _slot(

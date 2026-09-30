@@ -2,6 +2,8 @@
 /// member may export, and where engines may keep what they fetch.
 library;
 
+import '../io/media_reader_block_memory.dart';
+
 /// Where engines may keep what they fetch.
 sealed class const MediaReaderCache() {
   /// Nowhere: every showing fetches again.
@@ -12,6 +14,11 @@ sealed class const MediaReaderCache() {
 
   /// In a directory the host owns (per account, cleared on sign-out).
   const factory directory(String path) = MediaReaderDirectoryCache;
+
+  /// Lets go of what the [memory] cache holds for the whole app: the
+  /// parts of the files it has read. A host calls it when the account
+  /// changes, as it clears its directory.
+  static void clearMemory() => MediaReaderBlockMemory.shared.clear();
 }
 
 /// See [MediaReaderCache.none].

@@ -3,6 +3,7 @@
 /// imports one. Export is only ever the host's action.
 library;
 
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -55,5 +56,53 @@ void main() {
     }
 
     expect(imports, isEmpty, reason: 'A hand-off import in lib/ (MR8)');
+  });
+
+  test('the hand-off packages that come with a dependency are accounted '
+      'for', () {
+    // Every package an app gets by depending on this one, from the
+    // resolved package graph.
+    final Object? graph = jsonDecode(
+      File('.dart_tool/package_config.json').readAsStringSync(),
+    );
+    final packages = [
+      if (graph case {'packages': final List<Object?> packages})
+        for (final package in packages)
+          if (package case {'name': final String name}) name,
+    ];
+    expect(packages, contains('pdfrx'));
+
+    final arrived = {
+      for (final name in packages)
+        for (final handOff in _handOffs)
+          if (name == handOff || name.startsWith('${handOff}_')) handOff,
+    };
+
+    // `pdfrx` brings `url_launcher` for one thing: the banner it shows
+    // when a document does not load, which links to a web page. The PDF
+    // engine replaces that banner (the next test), so nothing in this
+    // package reaches it. Another name here needs the same account.
+    expect(arrived, {'url_launcher'});
+  });
+
+  test("pdfrx's own error banner, which opens a web page, is never built", () {
+    final viewers = <String>[];
+    for (final file in Directory(
+      'lib',
+    ).listSync(recursive: true).whereType<File>()) {
+      if (!file.path.endsWith('.dart')) continue;
+      final source = file.readAsStringSync();
+      if (!source.contains('PdfViewer(') && !source.contains('PdfViewer.')) {
+        continue;
+      }
+      viewers.add(file.path);
+      expect(
+        source,
+        contains('errorBannerBuilder:'),
+        reason: '${file.path} builds a PdfViewer with its default banner',
+      );
+    }
+
+    expect(viewers, isNotEmpty);
   });
 }

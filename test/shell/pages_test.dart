@@ -383,6 +383,42 @@ void main() {
 
       expect(page.state.status, '3 of 15');
     });
+
+    test('hands a link to the host, and opens nothing itself', () {
+      final handed = <Uri>[];
+      final page = MediaReaderPage(item: item('a.pdf'), onLink: handed.add);
+      addTearDown(page.dispose);
+      expect(page.opensLinks, isTrue);
+
+      page.openLink(Uri.parse('https://tendvine.example/rota'));
+
+      expect(handed, [Uri.parse('https://tendvine.example/rota')]);
+    });
+
+    test('without a host to take them, links go nowhere', () {
+      final page = MediaReaderPage(item: item('a.pdf'));
+      addTearDown(page.dispose);
+
+      expect(page.opensLinks, isFalse);
+      page.openLink(Uri.parse('https://tendvine.example/rota'));
+    });
+  });
+
+  group('the reader', () {
+    testWidgets("hands its pages the host's way with links", (tester) async {
+      final handed = <Uri>[];
+      final engine = FakeEngine('fake', kinds: {MediaKind.picture});
+      await pumpReader(
+        tester,
+        items: pictures(1),
+        engines: MediaReaderEngines([engine]),
+        onLink: handed.add,
+      );
+
+      engine.pages['a.jpg']!.openLink(Uri.parse('https://tendvine.example'));
+
+      expect(handed, [Uri.parse('https://tendvine.example')]);
+    });
   });
 }
 

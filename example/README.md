@@ -10,6 +10,12 @@ Above the list a voice note stands in a bubble, as a chat shows one:
 play it there, open the same file in the list, and the reader goes on
 with the same player.
 
+Two PDFs are in the list. `Rota_October.pdf` has 300 pages and is
+fetched a range at a time; its first line is a link, which the app is
+handed and shows in a dialog. `Accounts_2025.pdf` is protected: the
+reader asks the app, the app asks you, and the password is `harvest`.
+Both are written by `tool/make_pdfs.py`.
+
 The bundled samples are served by a small server inside the app, on
 the device's loopback: it signs URLs that expire, honours byte ranges
 and refuses what is expired, as a host's CDN would. The example needs

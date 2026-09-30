@@ -8,6 +8,7 @@ import '../item/media_reader_item.dart';
 import 'audio/audio_engine.dart';
 import 'media_reader_card_engine.dart';
 import 'media_reader_engine.dart';
+import 'pdf/pdf_engine.dart';
 import 'picture/picture_engine.dart';
 import 'video/video_engine.dart';
 
@@ -23,6 +24,7 @@ class const MediaReaderEngines(final List<MediaReaderEngine> _engines) {
     MediaReaderPictureEngine(),
     MediaReaderVideoEngine(),
     MediaReaderAudioEngine(),
+    MediaReaderPdfEngine(),
   ]);
 
   /// The file's card. It is not in the list: it is what [select] falls

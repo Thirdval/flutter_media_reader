@@ -10,6 +10,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_media_reader/flutter_media_reader.dart';
+import 'package:flutter_media_reader_example/host_chrome.dart';
 import 'package:flutter_media_reader_example/main.dart';
 import 'package:flutter_media_reader_example/samples.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -518,22 +519,170 @@ void main() {
     });
   });
 
+  group('PDF', () {
+    const rota = 'Rota_October.pdf';
+
+    bool shows(String text) => find.text(text).evaluate().isNotEmpty;
+
+    /// Opens the rota and waits for its first page.
+    Future<void> openRota(WidgetTester tester) async {
+      await pumpExample(tester);
+      await open(tester, rota);
+      await pumpUntil(tester, () => shows('1 of 300'));
+    }
+
+    testWidgets('a PDF of 300 pages opens from a signed URL, by ranges, and '
+        'goes to a page by its number', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await openRota(tester);
+
+      // Never the whole file in one answer, and one signature for all of
+      // the ranges.
+      final requests = files.server.served.where((file) => file.name == rota);
+      expect(requests, isNotEmpty);
+      for (final request in requests) {
+        expect(request.status, 206);
+        expect(request.range, isNotNull);
+      }
+      expect(files.server.signed[rota], 1);
+
+      await tester.tap(inReader(find.bySemanticsLabel('Pages')));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.enterText(inReader(find.byType(EditableText)), '300');
+      await tester.testTextInput.receiveAction(TextInputAction.go);
+      await pumpUntil(tester, () => shows('300 of 300'));
+
+      expect(find.text('Try again'), findsNothing);
+      semantics.dispose();
+    });
+
+    testWidgets('search reads through every page, and goes from match to '
+        'match', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await openRota(tester);
+
+      await tester.tap(inReader(find.bySemanticsLabel('Search')));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.enterText(
+        inReader(find.byType(EditableText)),
+        'Harvest supper',
+      );
+      // It is on three of the three hundred pages, the first the twelfth.
+      await pumpUntil(tester, () => shows('1 of 3'));
+      await pumpUntil(tester, () => !shows('1 of 300'));
+
+      await tester.tap(inReader(find.bySemanticsLabel('Next match')));
+      await pumpUntil(tester, () => shows('2 of 3'));
+      semantics.dispose();
+    });
+
+    testWidgets('a drag up scrolls the pages; a drag sideways goes to the '
+        'next file, a protected PDF the host is asked about', (tester) async {
+      await openRota(tester);
+      final reader = tester.getRect(find.byType(MediaReaderView));
+
+      // Fingers, not jumps: a real drag goes a little at a time. A page
+      // is taller than a desktop's window, so it takes a few.
+      for (var i = 0; i < 10 && shows('1 of 300'); i++) {
+        await tester.timedDragFrom(
+          reader.center,
+          Offset(0, -reader.height * 0.4),
+          const Duration(milliseconds: 300),
+        );
+        await tester.pump(const Duration(milliseconds: 600));
+      }
+      expect(shows('1 of 300'), isFalse);
+
+      // A finger starts from rest: the pager has the drag before the
+      // page's own panning could take it.
+      await tester.timedDragFrom(
+        reader.center,
+        Offset(-reader.width * 0.7, 0),
+        const Duration(milliseconds: 800),
+      );
+      await pumpUntil(tester, () => shows('Password'));
+
+      // The wrong one is asked about again; the right one opens it.
+      await tester.enterText(find.byType(TextField), 'supper');
+      await tester.tap(find.text('Open'));
+      await pumpUntil(tester, () => shows('That password did not open it.'));
+      // The first dialog is on its way out as the second comes in.
+      await pumpUntil(
+        tester,
+        () => find.byType(TextField).evaluate().length == 1,
+      );
+      await tester.enterText(find.byType(TextField), 'harvest');
+      await tester.tap(find.text('Open'));
+      await pumpUntil(tester, () => shows('1 of 2'));
+    });
+
+    testWidgets('a protected PDF the host gives up on shows its card', (
+      tester,
+    ) async {
+      await pumpExample(tester);
+      await open(tester, 'Accounts_2025.pdf');
+      await pumpUntil(tester, () => shows('Password'));
+
+      await tester.tap(find.text('Cancel'));
+
+      await pumpUntil(
+        tester,
+        () => shows('This file is protected by a password.'),
+      );
+    });
+
+    testWidgets('a link in a PDF is handed to the host', (tester) async {
+      await openRota(tester);
+      final context = tester.element(find.byType(MediaReaderView));
+      final reader = tester.getRect(find.byType(MediaReaderView));
+      // The page fits the reader's width, with a margin of 8 points each
+      // side. Its first line, a link, is 44 points down the page; the
+      // page starts below the screen's edge and the chrome's top row.
+      final perPoint = reader.width / (612 + 16);
+      final link =
+          reader.topLeft +
+          Offset(
+            (8 + 153) * perPoint,
+            MediaQuery.paddingOf(context).top +
+                hostChrome.contentInsets.top +
+                (8 + 44.5) * perPoint,
+          );
+
+      // The page's links are read once the page is drawn: a tap before
+      // that is a tap on the bare page.
+      await tester.pump(const Duration(seconds: 1));
+      await tester.tapAt(link);
+
+      await pumpUntil(
+        tester,
+        () => find
+            .textContaining('https://tendvine.example/rota')
+            .evaluate()
+            .isNotEmpty,
+      );
+      // The reader is still there, under the host's dialog.
+      expect(find.byType(MediaReaderView), findsOneWidget);
+      await tester.tap(find.text('Close'));
+      await tester.pump(const Duration(milliseconds: 400));
+    });
+  });
+
   group('the shell', () {
     testWidgets('a file without an engine opens as its card, pages, and '
         'closes', (tester) async {
       await pumpExample(tester);
 
-      await open(tester, 'Rota_October.pdf');
+      await open(tester, 'Budget 2026.xlsx');
 
       // The card after it has the same actions, and a phone's width puts
       // that page a hair's breadth on screen for a finder: only what can
       // be tapped is counted.
-      expect(find.text('PDF · 258 KB'), findsOneWidget);
+      expect(find.text('Document · 57 KB'), findsOneWidget);
       expect(find.text('Save to device').hitTestable(), findsOneWidget);
       expect(find.text('Share').hitTestable(), findsOneWidget);
 
       await swipeToNext(tester);
-      expect(find.text('Document · 57 KB'), findsOneWidget);
+      expect(find.text('Text · 4 KB'), findsOneWidget);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
@@ -561,9 +710,9 @@ void main() {
 
       await tester.tap(find.text("The host's chrome"));
       await tester.pumpAndSettle();
-      await open(tester, 'Rota_October.pdf');
+      await open(tester, 'Budget 2026.xlsx');
       final position =
-          samples.indexWhere((sample) => sample.name == 'Rota_October.pdf') + 1;
+          samples.indexWhere((sample) => sample.name == 'Budget 2026.xlsx') + 1;
       expect(find.text('$position of ${samples.length}'), findsOneWidget);
 
       await tester.tap(find.bySemanticsLabel('Close'));
@@ -575,7 +724,7 @@ void main() {
 
     testWidgets('a drag down closes the reader', (tester) async {
       await pumpExample(tester);
-      await open(tester, 'Budget 2026.xlsx');
+      await open(tester, 'model.glb');
 
       final height = tester.getSize(find.byType(PageView)).height;
       await tester.drag(find.byType(PageView), Offset(0, height * 0.5));

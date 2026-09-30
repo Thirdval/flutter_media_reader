@@ -5,10 +5,10 @@ audio with waveforms, PDF, Office documents (through a PDF your server
 makes), text, tables and archives, on iOS, Android, macOS, Windows and
 Linux.
 
-> **Status: pre-release (phase R4).** The reader's shell, its host
-> contract, and the engines for pictures, video and audio are in. The
-> engines for the other kinds arrive phase by phase; until then those
-> files show their card. Progress:
+> **Status: pre-release (phase R5).** The reader's shell, its host
+> contract, and the engines for pictures, video, audio and PDF are in.
+> The engines for the other kinds arrive phase by phase; until then
+> those files show their card. Progress:
 > [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
 
 ## Principles
@@ -16,7 +16,8 @@ Linux.
 - **Files never leave the app.** The reader never hands a file to
   another app or the browser. Exporting (share, save to device) is
   your action, shown only when your policy allows it. Engines cache
-  only where your policy says.
+  only where your policy says. A link in a file is handed to you, and
+  the reader opens nothing itself.
 - **One reader, swappable engines.** Each kind of file is shown by an
   engine, an adapter over a maintained plugin, chosen per platform.
   When no engine can show a file, the reader shows the file's card.
@@ -47,6 +48,7 @@ await showMediaReader(
   initialIndex: tapped,
   policy: MediaReaderPolicy(canExport: member.canExport),
   chrome: yourChrome,
+  onLink: (link) => askBeforeOpening(link), // a web address in a PDF
 );
 ```
 
@@ -153,6 +155,9 @@ MediaReaderPolicy(
   `memory()` (the default) or `directory(path)`.
 - With `canExport: false` nothing is kept on disk: a directory reads
   as memory.
+- The directory is yours: the reader writes there and nowhere else,
+  and never clears or bounds it. Clear it when the account changes,
+  and call `MediaReaderCache.clearMemory()` with it.
 - Copying text is not an export.
 
 ## The chrome
@@ -160,7 +165,8 @@ MediaReaderPolicy(
 `MediaReaderChrome` takes a builder for each slot. Each is given a
 `MediaReaderState`: the item on screen, its `index` and the `count`,
 the `policy` (and `canExport`), the engine's `status`, what plays on
-the page (`playback`), and `close`.
+the page (`playback`) or the document on it (`document`), and
+`close`.
 
 | Slot | For | Plain default |
 | --- | --- | --- |
@@ -169,7 +175,7 @@ the page (`playback`), and `close`.
 | `bottomStart` | Your actions: reply, forward | Empty |
 | `bottomEnd` | More | Empty |
 | `contextPill` | "Shared in #channel" | Empty |
-| `controls` | The transport for what plays | A bar: play, a scrubber or the waveform, time, speed, mute |
+| `controls` | The controls for what plays, or for a document | For what plays, a bar: play, a scrubber or the waveform, time, speed, mute. For a document, its pages and its search |
 | `status` | The engine's status: "1 of 15", a time | A pill, while there is one |
 | `cardActions` | Your actions on a file's card: save, share | Empty |
 
@@ -193,6 +199,11 @@ MediaReaderChrome(
   card and its reasons, the plain defaults and the page announcement.
   They are English unless you pass your own.
 - `close` is null where the reader cannot be closed.
+- `contentInsets` is the room your slots take at the top and the
+  bottom, within the safe area. A page that scrolls keeps it clear: a
+  PDF's first page starts below your top slots, and its last page can
+  be brought above your bottom ones. The default suits the plain
+  chrome.
 
 ## Engines
 
@@ -236,6 +247,8 @@ class const ModelEngine() implements MediaReaderEngine {
 | `renew(refused)` | A fresh location after a refusal (an expired URL). |
 | `status` | Set it to show "1 of 15" or a time in the chrome. |
 | `playback` | Set it to what plays on the page: the chrome's controls show its state and drive it. |
+| `document` | Set it to the document on the page: the chrome's controls show its pages and search it. |
+| `openLink(uri)`, `opensLinks` | Hands a link to the host's `onLink`, and says whether the host takes links at all. Mark a link as one only then. |
 | `holdsPaging`, `holdsDismiss` | Set while the engine owns sideways or downward drags: zoomed, or scrolled away from its top. |
 | `chromeVisible`, `toggleChrome()` | For an engine with controls of its own, or one that takes taps. |
 | `fail(reason)` | The engine cannot show the file: its card takes the engine's place, with the reason. |
@@ -447,6 +460,77 @@ await session.configure(const AudioSessionConfiguration.speech());
 The reader shows nothing on the lock screen and asks for no
 background mode: a file plays while your app is in front.
 
+## PDF
+
+`MediaReaderPdfEngine` shows PDFs with
+[`pdfrx`](https://pub.dev/packages/pdfrx), on PDFium, on every
+platform.
+
+- **Reading.** The pages run one under the other, fitted to the
+  width. A pinch, a double tap, or the wheel with Ctrl held magnifies,
+  up to 8 times. While a page fits the width, a drag
+  sideways goes between files; magnified, it moves the page. A drag
+  down is the pages' own, so a PDF is closed with the close button or
+  Esc.
+- **Where it is.** The status says "3 of 300". `state.document` gives
+  your controls the page on screen and the count, `goToPage`, a page
+  drawn small for a strip (`thumbnail`), and the search. The plain bar
+  has two buttons: Pages opens a strip of the pages and a field for a
+  page's number; Search opens a field, says "2 of 17", and steps
+  through the matches.
+
+  ```dart
+  MediaReaderChrome(
+    controls: (context, state) => switch (state.document) {
+      null => const SizedBox.shrink(),
+      final document => GlassPageStrip(document),
+    },
+  )
+  ```
+
+- **By ranges.** A remote PDF is read a range at a time, 256 KB by
+  default (`blockSize`), as PDFium asks for its parts. The first page
+  is up after two ranges, the file's first and its last, before the
+  rest has come. Your `resolve` is asked once for all of them, and
+  again only when the location is refused. A server that does not
+  answer `Range` requests is asked for the whole file, once.
+- **Kept where the policy says.** With `none()` the ranges are held
+  while the PDF is open. With `memory()` they stay for the next
+  showing, up to 64 MB for the whole app. With `directory(path)` they
+  are written to two files there, named after the item's id, and read
+  back the next time. Nothing is written anywhere else: `pdfrx`'s own
+  download cache is not used.
+- **Text.** A long press selects a word on a touch screen, a drag
+  selects with a mouse. The menu has Copy and Select all, and nothing
+  else. Copying is not an export, so it stays with export off; a PDF
+  whose own permissions forbid copying is not copied.
+- **Links.** A link to a place in the document goes there. A web
+  address is handed to your `onLink`; without one it is not a link.
+- **Passwords.** Give the engine your way to ask:
+
+  ```dart
+  MediaReaderEngines.standard.withFirst([
+    MediaReaderPdfEngine(
+      // Asked again, with the next attempt's number, while the answer
+      // does not open the file. Null gives up: the card.
+      password: (item, attempt) => askForPassword(item.name, attempt),
+    ),
+  ])
+  ```
+
+- **Failing.** A file that does not come, is not a PDF, or stays
+  locked gives way to the card, with the reason and "Try again".
+- **Keys.** Page Up and Page Down, Home and End, the arrows, select
+  all and copy work while the reader has the keyboard, and Ctrl or
+  Cmd with + and − magnify. The sideways arrows go between files while
+  the page fits the width.
+
+`pdfrx` brings the `url_launcher` plugin into your app for one thing:
+the banner it shows when a document fails, which links to a web page.
+The engine replaces that banner, so the reader never reaches the
+plugin. A test in this repository fails if that changes, or if
+another such package arrives with a dependency.
+
 ## Engines by kind
 
 Every engine runs on all five platforms.
@@ -457,7 +541,7 @@ Every engine runs on all five platforms.
 | Video | `video_player` (AVPlayer, ExoPlayer) with [`fvp`](https://pub.dev/packages/fvp) on Windows and Linux | In |
 | Audio | [`just_audio`](https://pub.dev/packages/just_audio); `fvp` on Windows and Linux | In |
 | Waveform | drawn from peaks your server computes | In |
-| PDF | [`pdfrx`](https://pub.dev/packages/pdfrx) (PDFium) | Planned |
+| PDF | [`pdfrx`](https://pub.dev/packages/pdfrx) (PDFium) | In |
 | Office | your server's PDF, through `pdfrx` | Planned |
 | Text, code, JSON, Markdown | Flutter text, `flutter_markdown_plus` | Planned |
 | CSV, TSV | a virtualised table | Planned |

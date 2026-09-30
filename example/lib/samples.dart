@@ -125,12 +125,15 @@ const List<Sample> samples = [
     preview: 'psalm.mp3',
     previewType: 'audio/mpeg',
   ),
+  // Three hundred pages, fetched a range at a time as they are read.
   Sample(
     name: 'Rota_October.pdf',
     contentType: 'application/pdf',
-    size: 264192,
-    bundled: false,
+    size: 1821311,
   ),
+  // Protected: the reader asks the host, and the host asks for the
+  // password. It is "harvest".
+  Sample(name: 'Accounts_2025.pdf', contentType: 'application/pdf', size: 1406),
   Sample(
     name: 'Budget 2026.xlsx',
     contentType: 'application/octet-stream',

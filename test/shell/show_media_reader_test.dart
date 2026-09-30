@@ -41,7 +41,7 @@ void main() {
     unawaited(
       showMediaReader(
         host,
-        items: [item('a.pdf'), item('b.pdf'), item('c.pdf')],
+        items: [item('a.glb'), item('b.glb'), item('c.glb')],
         initialIndex: initialIndex,
         onItemShown: onItemShown,
       ).then((_) => closed = true),
@@ -65,11 +65,11 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(MediaReaderDefaultTitle),
-          matching: find.text('b.pdf'),
+          matching: find.text('b.glb'),
         ),
         findsOneWidget,
       );
-      expect(shown, ['b.pdf']);
+      expect(shown, ['b.glb']);
       expect(closed(), isFalse);
       // The page beneath is still there, to show through a dismissing drag.
       expect(find.text('the conversation'), findsOneWidget);
