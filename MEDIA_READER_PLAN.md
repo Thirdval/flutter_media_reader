@@ -930,10 +930,11 @@ In every step:
     Dart code should be near Android's, so about 12 MB. Windows and
     Linux: no machine;
   - `CHANGELOG.md` has 1.0.0; the version is 1.0.0; 557 tests.
-- **For the owner:** the tag `v1.0.0` (and `v0.1.0` to `v0.8.0`, all
-  waiting), and the pub.dev decision (MR13): the package is ready for
-  `dart pub publish --dry-run` but has no `repository` field, since
-  Tendvine pins by git ref.
+- **Tags:** `v0.1.0` to `v0.8.0` and `v1.0.0` were made on
+  2026-09-30 at the owner's word, each at its phase's commit, for
+  Tendvine to pin by. **For the owner:** the pub.dev decision (MR13):
+  the package is ready for `dart pub publish --dry-run` but has no
+  `repository` field, since Tendvine pins by git ref.
 
 ---
 
@@ -942,16 +943,16 @@ In every step:
 | Phase | Title | Status | Commit / tag | Owner check |
 | --- | --- | --- | --- | --- |
 | R0 | Scaffold: repo, pins, lints, CI, example for five platforms, `MediaKind`, plan, CLAUDE.md | ☑ built 2026-09-30 — analyze clean, 5 tests, example builds for macOS | initial commit | ☐ |
-| R1 | Core and shell: items, sources, policy, registry, pager, chrome slots, the card engine | ☑ built 2026-09-30 — analyze clean, 117 tests, example run on Android and macOS | `d2c235e`; tag `v0.1.0` when the owner asks | ☐ |
-| R2 | Pictures | ☑ built 2026-09-30 — analyze clean, 182 tests, example run on Android and macOS | `c6ba3f5`; tag `v0.2.0` when the owner asks | ☐ |
-| R3 | Video (`video_player` + `fvp`) | ☑ built 2026-09-30 — analyze clean, 225 tests, example run on Android and macOS | `ea38e36`; tag `v0.3.0` when the owner asks | ☐ |
-| R4 | Audio and waveform, `MediaReaderAudioBar` | ☑ built 2026-09-30 — analyze clean, 304 tests, example run on Android and macOS | `9bbd4b5`; tag `v0.4.0` when the owner asks | ☐ |
-| R5 | PDF (`pdfrx`) | ☑ built 2026-09-30 — analyze clean, 395 tests, example run on Android and macOS | `b2f1290`; tag `v0.5.0` when the owner asks | ☐ |
-| R6 | Text, Markdown, tables, archives | ☑ built 2026-09-30 — analyze clean, 510 tests, example run on Android and macOS | `5dc5016`; tag `v0.6.0` when the owner asks | ☐ |
-| R7 | Derivatives: Office and HEIC through the host | ☑ built 2026-09-30 — analyze clean, 516 tests, example run on Android and macOS | the 0.7.0 commit; tag `v0.7.0` when the owner asks | ☐ |
-| R8 | Platform polish, accessibility, Live Text decision | ☑ built 2026-09-30 — analyze clean, 557 tests, example run on Android and macOS; PiP and Live Text blocked on the owner (native code) | the 0.8.0 commit; tag `v0.8.0` when the owner asks | ☐ |
+| R1 | Core and shell: items, sources, policy, registry, pager, chrome slots, the card engine | ☑ built 2026-09-30 — analyze clean, 117 tests, example run on Android and macOS | `d2c235e`; tagged `v0.1.0` on 2026-09-30 | ☐ |
+| R2 | Pictures | ☑ built 2026-09-30 — analyze clean, 182 tests, example run on Android and macOS | `c6ba3f5`; tagged `v0.2.0` on 2026-09-30 | ☐ |
+| R3 | Video (`video_player` + `fvp`) | ☑ built 2026-09-30 — analyze clean, 225 tests, example run on Android and macOS | `ea38e36`; tagged `v0.3.0` on 2026-09-30 | ☐ |
+| R4 | Audio and waveform, `MediaReaderAudioBar` | ☑ built 2026-09-30 — analyze clean, 304 tests, example run on Android and macOS | `9bbd4b5`; tagged `v0.4.0` on 2026-09-30 | ☐ |
+| R5 | PDF (`pdfrx`) | ☑ built 2026-09-30 — analyze clean, 395 tests, example run on Android and macOS | `b2f1290`; tagged `v0.5.0` on 2026-09-30 | ☐ |
+| R6 | Text, Markdown, tables, archives | ☑ built 2026-09-30 — analyze clean, 510 tests, example run on Android and macOS | `5dc5016`; tagged `v0.6.0` on 2026-09-30 | ☐ |
+| R7 | Derivatives: Office and HEIC through the host | ☑ built 2026-09-30 — analyze clean, 516 tests, example run on Android and macOS | `6067da7`; tagged `v0.7.0` on 2026-09-30 | ☐ |
+| R8 | Platform polish, accessibility, Live Text decision | ☑ built 2026-09-30 — analyze clean, 557 tests, example run on Android and macOS; PiP and Live Text blocked on the owner (native code) | `66fe4e2`; tagged `v0.8.0` on 2026-09-30 | ☐ |
 | R9a–d | Adoption in Tendvine (the Tendvine session) | ☐ | | ☐ |
-| R10 | 1.0 | ☑ built 2026-09-30 — analyze clean, 557 tests, API docs built, NOTICE.md, sizes measured on Android and macOS; `fvp` moved to the host | the 1.0.0 commit; tag `v1.0.0` when the owner asks | ☐ |
+| R10 | 1.0 | ☑ built 2026-09-30 — analyze clean, 557 tests, API docs built, NOTICE.md, sizes measured on Android and macOS; `fvp` moved to the host | `3ba01c5`; tagged `v1.0.0` on 2026-09-30 | ☐ |
 
 **Platform matrix** (fill per phase: ✓ run, – not run, ✗ fails):
 
