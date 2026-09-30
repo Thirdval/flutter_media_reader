@@ -48,6 +48,7 @@ class const MediaReaderDocumentState({
 /// A document on a page. An engine that shows one sets it as the page's
 /// `document`; the chrome's controls drive it.
 abstract interface class MediaReaderDocument() {
+  /// Where the document stands: its page, its search, its toggles.
   ValueListenable<MediaReaderDocumentState> get state;
 
   /// Goes to page [number], from 1. A document without pages stays

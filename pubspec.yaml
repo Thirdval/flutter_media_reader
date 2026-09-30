@@ -1,6 +1,6 @@
 name: flutter_media_reader
 description: "An in-app reader for the files a host hands it: pictures, video, audio with waveforms, PDF, text, tables and archives, on every platform, through swappable engines."
-version: 0.8.0
+version: 1.0.0
 homepage: https://github.com/Thirdval/flutter_media_reader
 repository: https://github.com/Thirdval/flutter_media_reader
 issue_tracker: https://github.com/Thirdval/flutter_media_reader/issues
@@ -22,13 +22,14 @@ dependencies:
   flutter:
     sdk: flutter
   # Video (MR2, MR3): the video_player API, played by AVPlayer and
-  # ExoPlayer where they exist, and by fvp (libmdk) on Windows and
-  # Linux, where fvp registers itself as video_player's implementation.
+  # ExoPlayer where they exist. On Windows and Linux a host adds fvp
+  # (libmdk) to its own app, and fvp registers itself as video_player's
+  # implementation there. It is not a dependency here: it would carry
+  # libmdk and FFmpeg into every app on every platform (R10, §5).
   video_player: ^2.14.0
-  fvp: ^0.39.0
   # Audio (MR4): just_audio on iOS, Android and macOS, with its handling
   # of the audio session's interruptions; on Windows and Linux audio
-  # plays through video_player, which fvp implements there.
+  # plays through video_player, which the host's fvp implements there.
   just_audio: ^0.10.5
   # PDF (MR5): pdfrx, on PDFium, on every platform. The engine reads a
   # remote file by ranges itself and hands pdfrx the bytes.

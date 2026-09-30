@@ -82,7 +82,12 @@ final class MediaReaderPage({
 
   /// The item's place among the items, from 0.
   int get index => _index;
+
+  /// How many items the reader has.
   int get count => _count;
+
+  /// The host's policy: whether export is allowed, and where a cache
+  /// may keep bytes.
   MediaReaderPolicy get policy => _policy;
 
   /// The chrome around the page: its colours and strings, for an engine

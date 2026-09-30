@@ -26,16 +26,22 @@ abstract interface class MediaReaderAudioPlayer() {
   /// Throws when it cannot.
   Future<void> open({MediaReaderLocation? location, String? path, Duration at});
 
+  /// Plays from where it stands; from the start again after the end.
   Future<void> play();
 
+  /// Pauses where it stands.
   Future<void> pause();
 
+  /// Goes to [position], within the file.
   Future<void> seek(Duration position);
 
+  /// Plays at [speed] times the file's own.
   Future<void> setSpeed(double speed);
 
+  /// Silences the sound, or lets it back.
   Future<void> setMuted(bool muted);
 
+  /// Lets go of the platform's player. Nothing may be called after it.
   Future<void> dispose();
 }
 

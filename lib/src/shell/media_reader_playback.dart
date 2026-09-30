@@ -46,15 +46,21 @@ class const MediaReaderPlaybackState({
 /// What plays on a page. An engine that plays something sets it as the
 /// page's `playback`; the chrome's controls drive it.
 abstract interface class MediaReaderPlayback() {
+  /// Where the file stands, for the controls to follow.
   ValueListenable<MediaReaderPlaybackState> get state;
 
+  /// Plays from where it stands; from the start again after the end.
   Future<void> play();
 
+  /// Pauses where it stands.
   Future<void> pause();
 
+  /// Goes to [position], within the file.
   Future<void> seekTo(Duration position);
 
+  /// Plays at [speed] times the file's own: 1, 1.5, 2.
   Future<void> setSpeed(double speed);
 
+  /// Silences the sound, or lets it back.
   Future<void> setMuted(bool muted);
 }

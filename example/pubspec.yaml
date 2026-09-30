@@ -11,6 +11,10 @@ dependencies:
     sdk: flutter
   flutter_media_reader:
     path: ../
+  # Windows and Linux: video and audio through libmdk. A host adds it
+  # itself; the package leaves it out, since a plugin is built for
+  # every platform an app targets (README, "Size").
+  fvp: ^0.39.0
 
 dev_dependencies:
   flutter_test:

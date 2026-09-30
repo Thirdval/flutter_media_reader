@@ -7,8 +7,13 @@ library;
 
 /// A file's kind.
 enum MediaKind() {
+  /// JPEG, PNG, GIF, WebP, HEIC and the rest.
   picture,
+
+  /// MP4, MOV, WebM and the rest.
   video,
+
+  /// M4A, MP3, WAV, Ogg and the rest, voice notes among them.
   audio,
   pdf,
 
@@ -18,11 +23,18 @@ enum MediaKind() {
 
   /// Plain text, logs, code, JSON, XML, YAML.
   text,
+
+  /// Markdown, laid out or as written.
   markdown,
 
   /// Comma- or tab-separated rows.
   table,
+
+  /// Zip, tar, gzip; 7z and rar are listed as this kind and show the
+  /// card.
   archive,
+
+  /// Anything else: the card.
   other;
 
   /// The kind of a file from its content type and name. The content

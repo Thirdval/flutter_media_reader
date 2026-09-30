@@ -1,3 +1,23 @@
+## 1.0.0 — 2026-09-30
+
+Phase R10, 1.0 (MEDIA_READER_PLAN.md):
+
+- **`fvp` is now your dependency**, for Windows and Linux only, where
+  it registers itself as `video_player`'s implementation. A plugin is
+  built for every platform an app targets, so as a dependency of this
+  package it carried libmdk, FFmpeg, libass and dav1d into iOS,
+  Android and macOS builds where the package never used them: 27 MB
+  on macOS, 13 MB per ABI on Android. Add `fvp: ^0.39.0` to an app
+  that ships on Windows or Linux; without it, video and audio show
+  their card there.
+- `NOTICE.md`: the packages and native libraries the engines bring,
+  their licences, and what they ask of an app that ships them.
+- The README's "Size" section: what the package adds to a release
+  build on Android and macOS, measured; iOS estimated.
+- Doc comments on every exported interface's members; `dart doc`
+  builds the API docs (with dartdoc 9.0.9: the SDK's 9.0.6 crashes
+  on a transitive dependency's `@docImport` lines).
+
 ## 0.8.0 — 2026-09-30
 
 Phase R8, platform polish (MEDIA_READER_PLAN.md):

@@ -8,8 +8,14 @@ import 'dart:typed_data';
 
 /// How a text's bytes are read.
 enum MediaReaderTextEncoding() {
+  /// UTF-8, with or without its mark: the default where the bytes
+  /// allow it.
   utf8,
+
+  /// UTF-16, little-endian, by its mark.
   utf16le,
+
+  /// UTF-16, big-endian, by its mark.
   utf16be,
 
   /// Windows-1252, the superset of Latin-1 that most files which are not

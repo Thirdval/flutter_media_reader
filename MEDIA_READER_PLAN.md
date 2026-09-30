@@ -373,7 +373,7 @@ Also exported for hosts:
 | --- | --- | --- |
 | MR1 | Own public repository `Thirdval/flutter_media_reader`, Apache-2.0, consumed by Tendvine through a git tag, like `flutter_reader` | **Decided** 2026-09-30 |
 | MR2 | Video through the `video_player` API with `fvp` as its engine | **Decided** 2026-09-30 |
-| MR3 | `fvp` registered for Windows and Linux only (`registerWith(options: {'platforms': ['windows', 'linux']})`). iOS, Android and macOS keep AVPlayer/ExoPlayer: battery, AirPlay, picture in picture, HDR. Widen to every platform only if codecs the native players refuse (webm/mkv on iOS) turn up in practice | Recommended |
+| MR3 | `fvp` registered for Windows and Linux only (`registerWith(options: {'platforms': ['windows', 'linux']})`). iOS, Android and macOS keep AVPlayer/ExoPlayer: battery, AirPlay, picture in picture, HDR. Widen to every platform only if codecs the native players refuse (webm/mkv on iOS) turn up in practice. R10: `fvp` is the host's dependency, not the package's, so that its native libraries stay out of the mobile builds (§4 R10, README "Size") | Recommended |
 | MR4 | Audio behind one `AudioEngine`: `just_audio` on iOS, Android and macOS (audio session, interruptions); `video_player`/`fvp` audio-only on Windows and Linux | Recommended |
 | MR5 | PDF on `pdfrx` (PDFium, MIT, every platform; `PdfViewer.uri` takes auth headers, range access and progressive loading) | Recommended |
 | MR6 | Waveform peaks come from the host: the server computes them at upload, in-app recordings capture them while recording. No on-device extraction before 1.0; without peaks the bar shows a plain progress track | Recommended |
@@ -884,7 +884,7 @@ In every step:
 - Share and Save follow the community download policy (B3);
 - the cache is per account and cleared on sign-out.
 
-### R10 — 1.0 (S)
+### R10 — 1.0 (S) · built
 
 - **Documentation:** the README written from the tests, API docs, and
   the CHANGELOG.
@@ -892,6 +892,48 @@ In every step:
 - **Size:** the example's added size per platform, measured and
   written down.
 - **Release:** `v1.0.0`, and the pub.dev decision (MR13).
+- **Built (2026-09-30):**
+  - the README's status is 1.0, its engines table has Office in, and
+    it has a "Size" section; every exported interface's member has a
+    doc comment (`MediaReaderPlayback`, `MediaReaderDocument`,
+    `MediaReaderAudioPlayer`, `MediaKind`, the text flavours and
+    encodings, the page's getters). `dart doc` builds the API docs
+    with dartdoc 9.0.9: 48 classes, one public library. The SDK's own
+    dartdoc 9.0.6 crashes on `@docImport` lines in `package:platform`
+    3.2.0 (a transitive dependency of `pdfrx` through
+    `path_provider`), not on this package; a newer dartdoc from pub
+    documents it. The lint `public_member_api_docs` reports every
+    primary constructor as undocumented, a false positive of the lint
+    with Dart 3.13's syntax, so it stays off;
+  - `NOTICE.md`: the pub packages and their licences, PDFium
+    (BSD-3-Clause, with its third parties), libmdk (its README's
+    terms, free for Flutter), FFmpeg (LGPL 2.1+, and what it asks of
+    an app), libass (ISC), dav1d (BSD-2-Clause), Media3 (Apache-2.0);
+  - **size, and a change to the dependencies.** A plugin is built for
+    every platform an app targets, so `fvp` carried libmdk, FFmpeg,
+    libass and dav1d into the iOS, Android and macOS builds of every
+    host, where the package never uses them: 27 MB in a macOS app,
+    13 MB per ABI on Android. `fvp` is now the host's dependency, for
+    Windows and Linux only, where it registers itself as
+    `video_player`'s implementation; the package has no code that
+    names it. MR3 holds as recommended, in the host's `pubspec.yaml`.
+    The example keeps `fvp`, being the host for all five platforms.
+    Without it, video and audio show their card on Windows and Linux;
+  - measured (release builds, the example less its sample files,
+    against a bare `flutter create` app; the numbers are in the
+    README's "Size"): Android arm64 APK 15.5 MB → 27.4 MB, 11.9 MB
+    added, of which PDFium 6.4 MB, Dart code 4.5 MB, Java 0.7 MB,
+    JNI 0.3 MB; macOS `.app` (arm64 and x86_64) 37.7 MB → 60.1 MB,
+    22.4 MB added, of which PDFium.framework 11.6 MB, Dart code 9.8 MB
+    in two slices, the plugins' native code 1.4 MB. iOS is not built
+    here: PDFium's arm64 slice is 7.1 MB in its XCFramework, and the
+    Dart code should be near Android's, so about 12 MB. Windows and
+    Linux: no machine;
+  - `CHANGELOG.md` has 1.0.0; the version is 1.0.0; 557 tests.
+- **For the owner:** the tag `v1.0.0` (and `v0.1.0` to `v0.8.0`, all
+  waiting), and the pub.dev decision (MR13): the package is ready for
+  `dart pub publish --dry-run` but has no `repository` field, since
+  Tendvine pins by git ref.
 
 ---
 
@@ -909,7 +951,7 @@ In every step:
 | R7 | Derivatives: Office and HEIC through the host | ☑ built 2026-09-30 — analyze clean, 516 tests, example run on Android and macOS | the 0.7.0 commit; tag `v0.7.0` when the owner asks | ☐ |
 | R8 | Platform polish, accessibility, Live Text decision | ☑ built 2026-09-30 — analyze clean, 557 tests, example run on Android and macOS; PiP and Live Text blocked on the owner (native code) | the 0.8.0 commit; tag `v0.8.0` when the owner asks | ☐ |
 | R9a–d | Adoption in Tendvine (the Tendvine session) | ☐ | | ☐ |
-| R10 | 1.0 | ☐ | | ☐ |
+| R10 | 1.0 | ☑ built 2026-09-30 — analyze clean, 557 tests, API docs built, NOTICE.md, sizes measured on Android and macOS; `fvp` moved to the host | the 1.0.0 commit; tag `v1.0.0` when the owner asks | ☐ |
 
 **Platform matrix** (fill per phase: ✓ run, – not run, ✗ fails):
 
@@ -924,6 +966,7 @@ In every step:
 | R6 | – | ✓ | ✓ | – | – |
 | R7 | – | ✓ | ✓ | – | – |
 | R8 | – | ✓ | ✓ | – | – |
+| R10 | – | ✓ size | ✓ size | – | – |
 
 Each ✓ is the example's integration test, run on a Pixel 10a with
 Android 17 and on macOS 27. iOS was not run: the owner runs iOS

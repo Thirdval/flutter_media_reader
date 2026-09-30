@@ -14,9 +14,17 @@ import 'text_view.dart';
 /// What a text is, for how it is set: prose in the reader's own face,
 /// the rest in a face of equal widths.
 enum MediaReaderTextFlavour() {
+  /// A `.txt` up to the engine's formatted size: wrapped at its words.
   prose,
+
+  /// Logs, code and everything else: rows of one height, wrapped at
+  /// the column or not.
   code,
+
+  /// JSON, laid out to be read on a toggle.
   json,
+
+  /// XML, laid out to be read on a toggle.
   xml,
 }
 

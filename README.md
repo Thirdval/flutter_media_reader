@@ -5,12 +5,12 @@ audio with waveforms, PDF, Office documents (through a PDF your server
 makes), text, tables and archives, on iOS, Android, macOS, Windows and
 Linux.
 
-> **Status: pre-release (phase R7).** The reader's shell, its host
-> contract, and the engines for pictures, video, audio, PDF, text,
-> Markdown, tables and archives are in, and Office files show through
-> the PDF your server makes of them. What is left before 1.0 is the
-> platform polish of R8. Progress:
-> [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
+> **Status: 1.0.** The reader's shell, its host contract, and the
+> engines for pictures, video, audio, PDF, text, Markdown, tables and
+> archives are in, and Office files show through the PDF your server
+> makes of them. It has run on Android and macOS at every phase; iOS,
+> Windows and Linux are built for and not yet run. The plan and its
+> platform matrix: [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
 
 ## Principles
 
@@ -372,7 +372,9 @@ usually on disk, and with export off nothing is kept there.
 `MediaReaderVideoEngine` plays through the `video_player` API: AVPlayer
 on iOS and macOS, ExoPlayer on Android, and
 [`fvp`](https://pub.dev/packages/fvp) (libmdk) on Windows and Linux,
-where `fvp` registers itself as `video_player`'s implementation.
+where `fvp` registers itself as `video_player`'s implementation. On
+those two platforms your app adds `fvp` to its own `pubspec.yaml`; it
+is not a dependency of this package (see below).
 
 | Format | Where |
 | --- | --- |
@@ -408,16 +410,28 @@ where `fvp` registers itself as `video_player`'s implementation.
 - **Sources.** A signed URL or a file. A video in memory has no
   player, and shows its card.
 
-`fvp` is a dependency on every platform, though it plays only on
-Windows and Linux: libmdk is linked into the iOS, Android and macOS
-builds as well.
+**Windows and Linux.** `video_player` has no implementation of its own
+there. `fvp` provides one and registers it by itself when your app
+depends on it:
+
+```yaml
+dependencies:
+  fvp: ^0.39.0 # Windows and Linux: video and audio through libmdk
+```
+
+It is your dependency and not this package's because a plugin is
+built for every platform an app targets: `fvp` would carry libmdk,
+FFmpeg, libass and dav1d into your iOS, Android and macOS builds too,
+where this package never uses them — about 27 MB in a macOS app and
+13 MB per ABI in an Android one. With `fvp` absent, video and audio
+show their card on Windows and Linux.
 
 ## Audio
 
 `MediaReaderAudioEngine` plays through
 [`just_audio`](https://pub.dev/packages/just_audio) on iOS, Android and
 macOS, and through the `video_player` API on Windows and Linux, where
-`fvp` plays a file that has no picture.
+your app's `fvp` plays a file that has no picture.
 
 | Format | Where |
 | --- | --- |
@@ -671,11 +685,11 @@ Every engine runs on all five platforms.
 | Kind | Engine | Status |
 | --- | --- | --- |
 | Pictures | Flutter `Image` + `InteractiveViewer` | In |
-| Video | `video_player` (AVPlayer, ExoPlayer) with [`fvp`](https://pub.dev/packages/fvp) on Windows and Linux | In |
-| Audio | [`just_audio`](https://pub.dev/packages/just_audio); `fvp` on Windows and Linux | In |
+| Video | `video_player` (AVPlayer, ExoPlayer); your app's [`fvp`](https://pub.dev/packages/fvp) on Windows and Linux | In |
+| Audio | [`just_audio`](https://pub.dev/packages/just_audio); your app's `fvp` on Windows and Linux | In |
 | Waveform | drawn from peaks your server computes | In |
 | PDF | [`pdfrx`](https://pub.dev/packages/pdfrx) (PDFium) | In |
-| Office | your server's PDF, through `pdfrx` | Planned |
+| Office | your server's PDF, through `pdfrx` | In |
 | Text, code, JSON | Flutter text, a line at a time | In |
 | Markdown | [`flutter_markdown_plus`](https://pub.dev/packages/flutter_markdown_plus) | In |
 | CSV, TSV | [`two_dimensional_scrollables`](https://pub.dev/packages/two_dimensional_scrollables) | In |
@@ -699,8 +713,30 @@ fills the plan's platform matrix:
 cd example && fvm flutter test integration_test -d <device>
 ```
 
+## Size
+
+What the package adds to a release build, measured on the example
+against a bare app made with `flutter create`, with Flutter 3.47.5 on
+2026-09-30. The example's own sample files are left out of its
+numbers; `fvp` is not in them, being your dependency for Windows and
+Linux only.
+
+| Platform | Bare app | With the package | Added | Of which |
+| --- | --- | --- | --- | --- |
+| Android, arm64 release APK | 15.5 MB | 27.4 MB | 11.9 MB | PDFium 6.4 MB; Dart code 4.5 MB; Java (ExoPlayer, the plugins) 0.7 MB; JNI 0.3 MB |
+| macOS, release `.app` (arm64 and x86_64) | 37.7 MB | 60.1 MB | 22.4 MB | PDFium.framework 11.6 MB; Dart code 9.8 MB, two slices; the plugins' native code 1.4 MB |
+| iOS | not built here | | about 12 MB | PDFium's arm64 slice, 7.1 MB in its XCFramework; Dart code about 5 MB, as on Android |
+| Windows, Linux | not built here | | | PDFium and the Dart code, and your `fvp`: libmdk, FFmpeg, libass and dav1d |
+
+Where an app adds `fvp`, it brings about 13 MB per ABI on Android
+(FFmpeg 8.3 MB, libmdk 2.3 MB, libass 1.5 MB, dav1d 0.7 MB) and a
+28 MB `mdk.framework` on macOS, on the platforms where this package
+never uses it; hence its place in your `pubspec.yaml`, not this one.
+
 ## Licence
 
-Apache-2.0. Engines bring their own licences: PDFium (through
-`pdfrx`) and libmdk/FFmpeg (through `fvp`). A notice file arrives
-with 1.0.
+Apache-2.0. Engines bring their own licences, and some bring native
+libraries: PDFium through `pdfrx`, and libmdk, FFmpeg, libass and
+dav1d through `fvp` where your app adds it. [NOTICE.md](NOTICE.md)
+names them all, with their licences and what they ask of an app that
+ships them.

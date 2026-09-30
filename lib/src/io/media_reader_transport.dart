@@ -6,8 +6,8 @@ library;
 import 'dart:async';
 import 'dart:io';
 
-/// Bytes [start] to [end], both included; to the end of the file when
-/// [end] is null.
+/// Bytes `start` to `end`, both included; to the end of the file when
+/// `end` is null.
 typedef MediaReaderRange = ({int start, int? end});
 
 /// The answer to a GET.
