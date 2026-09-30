@@ -82,7 +82,7 @@ host (Tendvine) lends:
 - R1 the core and the shell (built).
 - R2–R6 one kind of file each: pictures (built), video (built), audio
   with waveform (built), PDF (built), text/tables/archives (built).
-- R7 Office and HEIC through the host's derivatives.
+- R7 Office and HEIC through the host's derivatives (built).
 - R8 platform polish.
 - R9 Tendvine adopts it (in its own session, in four steps, the first
   right after R3, which already removes the external hand-off).
@@ -184,6 +184,7 @@ Future<void> showMediaReader(
   MediaReaderEngines engines = MediaReaderEngines.standard,
   ValueChanged<MediaReaderItem>? onItemShown, // on screen, not prepared
   ValueChanged<Uri>? onLink, // a link in a file: the host's to open (R5)
+  ValueListenable<List<MediaReaderItem>>? liveItems, // followed while open (R7)
 });
 
 // The same reader as a widget, for a pane. Rebuilt with another list,
@@ -211,10 +212,11 @@ class const MediaReaderItem({
 
 // A derivative with its own type: its own kind's engine shows it.
 class const MediaReaderPreview({
-  required final MediaReaderSource source,
+  final MediaReaderSource? source, // null while not ready (R7)
   final String? contentType,
   final String? name,
   final MediaKind? kind,
+  final MediaReaderPreviewState state = ready, // preparing, failed (R7)
 });
 
 sealed class const MediaReaderSource() {
@@ -754,7 +756,7 @@ session the same day.
   - the tests run the real widgets, the real zlib and the real
     formats, on files made on the spot; no goldens (MR14).
 
-### R7 — Derivatives: Office and HEIC via the host (S)
+### R7 — Derivatives: Office and HEIC via the host (S) · built
 
 - **Preview:** `MediaReaderItem.preview` is shown by its own kind's
   engine (an Office file's PDF through `pdfrx`, a HEIC's JPEG as a
@@ -762,6 +764,25 @@ session the same day.
   "being prepared" and "could not be prepared", with retry.
 - **Done when:** a docx with a PDF preview reads as the PDF, and one
   without shows its card saying so.
+- **Built (2026-09-30):**
+  - `MediaReaderPreview` has a state: ready, preparing or failed, as
+    the backend's `derivatives` says (§6, B2 and B4). A ready preview
+    is shown by its own kind's engine, as the registry has done since
+    R1; a preview being prepared shows the file's card with a ring and
+    the words, one that failed shows the card with its words; neither
+    offers a retry, since the server is not asked again by the reader;
+  - `showMediaReader(liveItems:)`: the reader follows the host's items
+    while it is open, so that the push the host hears
+    (`attachment.updated`) turns the card into the file where it
+    stands. `MediaReaderView` did that already when rebuilt;
+  - the example shows an Office file through a PDF, and one whose PDF
+    a switch finishes; on both devices the card gave way to the PDF
+    while the reader was open. 516 tests.
+- **Not run:** iOS; Windows and Linux; a real `docx` through
+  Tendvine's converter (that is R9, in Tendvine's session).
+- **Left for R9:** the mapping from the backend's `derivatives` and
+  the resolve of `variant: pdf` or `display` to items, which is the
+  host's.
 
 ### R8 — Platform polish (M)
 
@@ -820,8 +841,8 @@ In every step:
 | R3 | Video (`video_player` + `fvp`) | ☑ built 2026-09-30 — analyze clean, 225 tests, example run on Android and macOS | `ea38e36`; tag `v0.3.0` when the owner asks | ☐ |
 | R4 | Audio and waveform, `MediaReaderAudioBar` | ☑ built 2026-09-30 — analyze clean, 304 tests, example run on Android and macOS | `9bbd4b5`; tag `v0.4.0` when the owner asks | ☐ |
 | R5 | PDF (`pdfrx`) | ☑ built 2026-09-30 — analyze clean, 395 tests, example run on Android and macOS | `b2f1290`; tag `v0.5.0` when the owner asks | ☐ |
-| R6 | Text, Markdown, tables, archives | ☑ built 2026-09-30 — analyze clean, 510 tests, example run on Android and macOS | the 0.6.0 commit; tag `v0.6.0` when the owner asks | ☐ |
-| R7 | Derivatives: Office and HEIC through the host | ☐ | | ☐ |
+| R6 | Text, Markdown, tables, archives | ☑ built 2026-09-30 — analyze clean, 510 tests, example run on Android and macOS | `5dc5016`; tag `v0.6.0` when the owner asks | ☐ |
+| R7 | Derivatives: Office and HEIC through the host | ☑ built 2026-09-30 — analyze clean, 516 tests, example run on Android and macOS | the 0.7.0 commit; tag `v0.7.0` when the owner asks | ☐ |
 | R8 | Platform polish, accessibility, Live Text decision | ☐ | | ☐ |
 | R9a–d | Adoption in Tendvine (the Tendvine session) | ☐ | | ☐ |
 | R10 | 1.0 | ☐ | | ☐ |
@@ -837,6 +858,7 @@ In every step:
 | R4 | – | ✓ | ✓ | – | – |
 | R5 | – | ✓ | ✓ | – | – |
 | R6 | – | ✓ | ✓ | – | – |
+| R7 | – | ✓ | ✓ | – | – |
 
 Each ✓ is the example's integration test, run on a Pixel 10a with
 Android 17 and on macOS 27. iOS was not run: the owner runs iOS
@@ -865,6 +887,9 @@ builds. Windows and Linux were not run: no machine.
   header pinned; a README laid out, its link handed to the host; JSON
   laid out; a zip's folder opened and its picture shown in a reader
   over the reader; a gzipped tar listed.
+- R7: thirty-one tests. An Office file shown through its PDF, its own
+  bytes never asked for; one being prepared shown as its card, and as
+  the PDF once the host said the server was done.
 
 Legend: ☐ not started · ◐ in progress · ☑ done (commit) · ✔ owner
 verified · ⊘ blocked (reason). Update the row in the same commit as

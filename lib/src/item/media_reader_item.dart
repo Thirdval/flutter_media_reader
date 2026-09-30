@@ -50,37 +50,74 @@ class const MediaReaderItem({
 
   /// The preview read as an item of its own: the preview's source, type
   /// and kind, under this file's id and with the rest of what the host
-  /// said about the file. Null without a preview. It is what an engine is
-  /// built with when it shows the preview.
+  /// said about the file. Null without a preview, and while the preview
+  /// is not ready. It is what an engine is built with when it shows the
+  /// preview.
   MediaReaderItem? get asPreview => switch (preview) {
-    null => null,
-    final preview => MediaReaderItem(
-      id: id,
-      name: preview.name ?? name,
-      contentType: preview.contentType,
-      kind: preview.kind,
-      source: preview.source,
-      poster: poster,
-      peaks: peaks,
-      duration: duration,
-      data: data,
-    ),
+    MediaReaderPreview(:final source?, :final name, :final contentType) =>
+      MediaReaderItem(
+        id: id,
+        name: name ?? this.name,
+        contentType: contentType,
+        kind: preview!.kind,
+        source: source,
+        poster: poster,
+        peaks: peaks,
+        duration: duration,
+        data: data,
+      ),
+    _ => null,
   };
+}
+
+/// How far the host's server has got with a derivative (R7).
+enum MediaReaderPreviewState() {
+  /// It is there to be shown.
+  ready,
+
+  /// It is being made: the file's card says so, and the file is shown
+  /// once the host hands the reader the ready preview.
+  preparing,
+
+  /// It could not be made: the file's card says so.
+  failed,
 }
 
 /// A derivative the host makes of a file the reader cannot show as it is:
 /// the PDF of an Office file, the JPEG of a HEIC. It is shown by its own
 /// kind's engine.
 class const MediaReaderPreview({
-  required final MediaReaderSource source,
+  /// Where the derivative is; null while it is not [MediaReaderPreviewState.ready].
+  final MediaReaderSource? source,
   final String? contentType,
 
   /// The derivative's file name, where it has one.
   final String? name,
   final MediaKind? _kind,
+  final MediaReaderPreviewState state = MediaReaderPreviewState.ready,
 }) {
+  /// A derivative the server is still making.
+  const factory preparing({String? contentType}) = _PreparingPreview;
+
+  /// A derivative the server could not make.
+  const factory failed() = _FailedPreview;
+
+  this
+    : assert(
+        source != null || state != MediaReaderPreviewState.ready,
+        'A ready preview has a source.',
+      );
+
   /// What the derivative is: the host's reading, or [contentType] and
   /// [name] read by [MediaKind.of].
   MediaKind get kind =>
       _kind ?? MediaKind.of(contentType: contentType, fileName: name);
+}
+
+class const _PreparingPreview({super.contentType}) extends MediaReaderPreview {
+  this : super(state: MediaReaderPreviewState.preparing);
+}
+
+class const _FailedPreview() extends MediaReaderPreview {
+  this : super(state: MediaReaderPreviewState.failed);
 }

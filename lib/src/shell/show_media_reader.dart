@@ -3,6 +3,7 @@ library;
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 import '../engine/media_reader_engines.dart';
@@ -15,11 +16,16 @@ import 'media_reader_view.dart';
 /// completes when the reader is dismissed: a drag down, Esc, the close
 /// button, or the platform's back.
 ///
+/// [liveItems] is for a host whose items change while the reader is
+/// open: a preview the server has just made, a file taken out of the
+/// list. The reader follows it, the file on screen staying on screen.
+///
 /// The route is see-through, so the page beneath shows as the reader is
 /// dragged away.
 Future<void> showMediaReader(
   BuildContext context, {
   required List<MediaReaderItem> items,
+  ValueListenable<List<MediaReaderItem>>? liveItems,
   int initialIndex = 0,
   MediaReaderChrome chrome = const MediaReaderChrome(),
   MediaReaderPolicy policy = const MediaReaderPolicy(),
@@ -33,16 +39,25 @@ Future<void> showMediaReader(
     fullscreenDialog: true,
     transitionDuration: const Duration(milliseconds: 200),
     reverseTransitionDuration: const Duration(milliseconds: 200),
-    pageBuilder: (context, _, _) => MediaReaderView(
-      items: items,
-      initialIndex: initialIndex,
-      chrome: chrome,
-      policy: policy,
-      engines: engines,
-      onItemShown: onItemShown,
-      onLink: onLink,
-      onDismissed: () => unawaited(Navigator.of(context).maybePop()),
-    ),
+    pageBuilder: (context, _, _) {
+      MediaReaderView view(List<MediaReaderItem> items) => MediaReaderView(
+        items: items,
+        initialIndex: initialIndex,
+        chrome: chrome,
+        policy: policy,
+        engines: engines,
+        onItemShown: onItemShown,
+        onLink: onLink,
+        onDismissed: () => unawaited(Navigator.of(context).maybePop()),
+      );
+      return switch (liveItems) {
+        null => view(items),
+        final live => ValueListenableBuilder(
+          valueListenable: live,
+          builder: (context, items, _) => view(items),
+        ),
+      };
+    },
     transitionsBuilder: (context, animation, _, child) =>
         FadeTransition(opacity: animation, child: child),
   ),

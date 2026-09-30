@@ -52,6 +52,9 @@ class _SamplesPageState() extends State<SamplesPage> {
     showMediaReader(
       context,
       items: widget.files.items,
+      // A preview the server finishes while the reader is open comes
+      // through: the file's card gives way to it.
+      liveItems: widget.files.live,
       initialIndex: index,
       policy: MediaReaderPolicy(canExport: _canExport),
       chrome: _hostChrome ? hostChrome : const MediaReaderChrome(),
@@ -111,6 +114,19 @@ class _SamplesPageState() extends State<SamplesPage> {
                 subtitle: const Text('Off: the plain defaults of the package'),
                 value: _hostChrome,
                 onChanged: (value) => setState(() => _hostChrome = value),
+              ),
+              SwitchListTile(
+                title: const Text(
+                  'The server has made the PDF of '
+                  'Minutes.docx',
+                ),
+                subtitle: const Text(
+                  'Off: the file is being prepared. Turn it on while '
+                  'the reader shows the file.',
+                ),
+                value: widget.files.serverDone,
+                onChanged: (value) =>
+                    setState(() => widget.files.serverDone = value),
               ),
               const Divider(),
               for (final (index, sample) in samples.indexed)

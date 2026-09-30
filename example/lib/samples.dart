@@ -41,6 +41,10 @@ class const Sample({
   /// length.
   final List<double>? peaks,
   final Duration? duration,
+
+  /// Whether the server is still making the preview: the file shows its
+  /// card until the sample page's switch says the server is done.
+  final bool prepares = false,
 });
 
 /// The voice note's name: the example also shows it inline, as a chat
@@ -153,18 +157,40 @@ const List<Sample> samples = [
   // its end, and only the entry opened is fetched.
   Sample(name: 'photos.zip', contentType: 'application/zip', size: 44997),
   Sample(name: 'logs.tar.gz', contentType: 'application/gzip', size: 3577),
-  // An Office file without a PDF yet, and a kind no engine shows: their
-  // cards.
+  // An Office file is shown through the PDF the server makes of it: here
+  // the rota stands in for that PDF. The file itself is never fetched.
   Sample(
     name: 'Budget 2026.xlsx',
     contentType: 'application/octet-stream',
     size: 58368,
     bundled: false,
+    preview: 'Rota_October.pdf',
+    previewType: 'application/pdf',
   ),
+  // One whose PDF the server is still making: its card, until the
+  // switch above says the server is done.
+  Sample(
+    name: 'Minutes.docx',
+    contentType:
+        'application/vnd.openxmlformats-officedocument.'
+        'wordprocessingml.document',
+    size: 20480,
+    bundled: false,
+    preview: 'Accounts_2025.pdf',
+    previewType: 'application/pdf',
+    prepares: true,
+  ),
+  // Kinds no engine shows: their cards.
   Sample(
     name: 'model.glb',
     contentType: 'model/gltf-binary',
     size: 7340032,
+    bundled: false,
+  ),
+  Sample(
+    name: 'photos.7z',
+    contentType: 'application/x-7z-compressed',
+    size: 104857600,
     bundled: false,
   ),
 ];
@@ -178,8 +204,9 @@ class SampleFiles(
 ) {
   static Future<SampleFiles> load() async {
     final bytes = <String, Uint8List>{};
-    for (final sample in samples.where((sample) => sample.bundled)) {
-      for (final name in [sample.name, ?sample.preview]) {
+    for (final sample in samples) {
+      for (final name in [if (sample.bundled) sample.name, ?sample.preview]) {
+        if (bytes.containsKey(name)) continue;
         final data = await rootBundle.load('assets/samples/$name');
         bytes[name] = data.buffer.asUint8List();
       }
@@ -190,6 +217,19 @@ class SampleFiles(
           .writeAsBytesSync(bytes[sample.name]!);
     }
     return SampleFiles(bytes, await SampleServer.start(bytes), directory);
+  }
+
+  bool _serverDone = false;
+
+  /// The items as they stand, for a reader that follows them.
+  late final ValueNotifier<List<MediaReaderItem>> live = ValueNotifier(items);
+
+  /// Whether the server has made the previews that were being prepared.
+  bool get serverDone => _serverDone;
+
+  set serverDone(bool done) {
+    _serverDone = done;
+    live.value = items;
   }
 
   /// The samples as the reader's items. The host's own data rides along
@@ -204,6 +244,8 @@ class SampleFiles(
         source: _sourceOf(sample),
         preview: switch (sample.preview) {
           null => null,
+          _ when sample.prepares && !_serverDone =>
+            MediaReaderPreview.preparing(contentType: sample.previewType),
           final preview => MediaReaderPreview(
             source: MediaReaderSource.remote(() => _resolve(preview)),
             contentType: sample.previewType,

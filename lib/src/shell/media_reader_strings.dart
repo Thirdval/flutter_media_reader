@@ -24,6 +24,13 @@ class const MediaReaderStrings({
   /// On the card, when no engine shows this kind of file.
   final String notShown = 'This file cannot be shown here.',
 
+  /// On the card, while the host's server makes what the reader shows
+  /// of the file, and when it could not (R7).
+  final String preparing = 'This file is being prepared.',
+  final String previewFailed =
+      'A copy of this file for the reader could '
+      'not be made.',
+
   /// On the card, when an engine could not open the file it was given.
   final String failed = 'This file could not be opened.',
 

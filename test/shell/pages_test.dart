@@ -107,6 +107,64 @@ void main() {
       expect(find.text('The preview is damaged.'), findsOneWidget);
     });
 
+    testWidgets('a preview being prepared shows the card, and the file '
+        'once it is ready', (tester) async {
+      final host = FakeResolve();
+      await pumpReader(
+        tester,
+        items: [
+          item(
+            'Minutes.docx',
+            size: 1024,
+            preview: const MediaReaderPreview.preparing(),
+          ),
+        ],
+        engines: engines,
+      );
+      expect(find.text('This file is being prepared.'), findsOneWidget);
+      expect(find.text('Try again'), findsNothing);
+      expect(engine.alive, isEmpty);
+
+      // The host hears from its server, and hands the reader the file
+      // again, with the PDF made of it.
+      await pumpReader(
+        tester,
+        items: [
+          item(
+            'Minutes.docx',
+            size: 1024,
+            preview: MediaReaderPreview(
+              source: MediaReaderSource.remote(host.call),
+              contentType: 'application/pdf',
+            ),
+          ),
+        ],
+        engines: engines,
+      );
+      await tester.pump();
+
+      expect(find.text('fake:Minutes.docx'), findsOneWidget);
+      expect(find.text('This file is being prepared.'), findsNothing);
+    });
+
+    testWidgets('a preview that could not be made says so on the card', (
+      tester,
+    ) async {
+      await pumpReader(
+        tester,
+        items: [
+          item('Minutes.docx', preview: const MediaReaderPreview.failed()),
+        ],
+        engines: engines,
+      );
+
+      expect(
+        find.text('A copy of this file for the reader could not be made.'),
+        findsOneWidget,
+      );
+      expect(find.text('Try again'), findsNothing);
+    });
+
     testWidgets('is tried again from the card', (tester) async {
       await pumpReader(tester, items: pictures(1), engines: engines);
       engine.pages['a.jpg']!.fail('The picture is damaged.');

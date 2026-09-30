@@ -72,8 +72,21 @@ class const _Card({
                 builder: (context, failure, _) => Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    // The host's server may still be making what the
+                    // reader shows of the file (R7).
+                    if (failure == null && _preparing) ...[
+                      MediaReaderBusy(chrome: chrome),
+                      const SizedBox(height: 12),
+                    ],
                     Text(
-                      failure ?? strings.notShown,
+                      failure ??
+                          switch (item.preview?.state) {
+                            MediaReaderPreviewState.preparing =>
+                              strings.preparing,
+                            MediaReaderPreviewState.failed =>
+                              strings.previewFailed,
+                            _ => strings.notShown,
+                          },
                       textAlign: TextAlign.center,
                       style: faint,
                     ),
@@ -101,6 +114,9 @@ class const _Card({
       ),
     );
   }
+
+  bool get _preparing =>
+      item.preview?.state == MediaReaderPreviewState.preparing;
 
   /// The name's extension in capitals, where it is short enough to badge.
   static String? _extension(String name) {

@@ -4,13 +4,13 @@
 /// never leave the app: exporting is the host's action, under the
 /// host's policy.
 ///
-/// Pre-release: phase R6 of MEDIA_READER_PLAN.md. The reader's shell and
+/// Pre-release: phase R7 of MEDIA_READER_PLAN.md. The reader's shell and
 /// its host contract are here — `showMediaReader` and [MediaReaderView],
 /// items and their sources, the policy, the chrome's slots, and the
 /// registry of engines — with the engines for pictures, video, audio,
-/// PDF, text, Markdown, tables and archives, and [MediaReaderAudioBar]
-/// for a voice note in a chat. Office files come with R7, through the
-/// PDF a host's server makes of them.
+/// PDF, text, Markdown, tables and archives, Office files through the
+/// PDF a host's server makes of them, and [MediaReaderAudioBar] for a
+/// voice note in a chat.
 library;
 
 export 'src/engine/archive/archive_engine.dart';

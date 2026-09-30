@@ -16,6 +16,11 @@ handed and shows in a dialog. `Accounts_2025.pdf` is protected: the
 reader asks the app, the app asks you, and the password is `harvest`.
 Both are written by `tool/make_pdfs.py`.
 
+`Budget 2026.xlsx` is shown through a PDF, as a host's server would
+make one: the rota stands in for it. `Minutes.docx` is being prepared
+until the switch on the samples page says the server is done; turn it
+on while the reader shows the file, and the card gives way to the PDF.
+
 The texts, the table and the archives are written by
 `tool/make_texts.py`: a sermon, a README with a link and an image,
 JSON on one line, a log of thirty thousand lines, a table of a hundred

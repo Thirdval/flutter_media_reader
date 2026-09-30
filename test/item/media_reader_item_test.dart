@@ -53,6 +53,40 @@ void main() {
       expect(docx.preview!.kind, MediaKind.pdf);
     });
 
+    test('is read as an item of its own only when it is ready', () {
+      MediaReaderItem docx(MediaReaderPreview preview) => MediaReaderItem(
+        id: '1',
+        name: 'Minutes.docx',
+        source: bytes,
+        preview: preview,
+      );
+
+      final ready = docx(
+        MediaReaderPreview(source: bytes, contentType: 'application/pdf'),
+      ).asPreview!;
+      expect(ready.kind, MediaKind.pdf);
+      expect(ready.id, '1');
+      expect(ready.name, 'Minutes.docx');
+
+      expect(docx(const MediaReaderPreview.preparing()).asPreview, isNull);
+      expect(docx(const MediaReaderPreview.failed()).asPreview, isNull);
+      expect(
+        const MediaReaderPreview.preparing().state,
+        MediaReaderPreviewState.preparing,
+      );
+      expect(
+        const MediaReaderPreview.failed().state,
+        MediaReaderPreviewState.failed,
+      );
+    });
+
+    test('a ready preview has a source', () {
+      expect(
+        () => MediaReaderPreview(contentType: 'application/pdf'),
+        throwsAssertionError,
+      );
+    });
+
     test('the kind can come from its name or from the host', () {
       expect(
         MediaReaderPreview(source: bytes, name: 'IMG_0042.jpg').kind,

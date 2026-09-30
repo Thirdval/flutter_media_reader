@@ -51,6 +51,20 @@ void main() {
   }
 
   group('showMediaReader', () {
+    testWidgets('follows the items as the host changes them', (tester) async {
+      final host = await pumpHost(tester);
+      final live = ValueNotifier([item('a.glb'), item('b.glb')]);
+      addTearDown(live.dispose);
+      unawaited(showMediaReader(host, items: live.value, liveItems: live));
+      await tester.pumpAndSettle();
+      expect(find.text('1 of 2'), findsOneWidget);
+
+      live.value = [item('a.glb'), item('b.glb'), item('c.glb')];
+      await tester.pumpAndSettle();
+
+      expect(find.text('1 of 3'), findsOneWidget);
+    });
+
     testWidgets('opens the reader over the app, at the item asked for', (
       tester,
     ) async {

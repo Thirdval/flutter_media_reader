@@ -5,11 +5,12 @@ audio with waveforms, PDF, Office documents (through a PDF your server
 makes), text, tables and archives, on iOS, Android, macOS, Windows and
 Linux.
 
-> **Status: pre-release (phase R6).** The reader's shell, its host
+> **Status: pre-release (phase R7).** The reader's shell, its host
 > contract, and the engines for pictures, video, audio, PDF, text,
-> Markdown, tables and archives are in. Office files arrive with R7,
-> through the PDF your server makes of them; until then they show their
-> card. Progress: [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
+> Markdown, tables and archives are in, and Office files show through
+> the PDF your server makes of them. What is left before 1.0 is the
+> platform polish of R8. Progress:
+> [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
 
 ## Principles
 
@@ -54,6 +55,7 @@ await showMediaReader(
 
 The future completes when the reader is dismissed. The route is
 see-through: the page beneath shows as the reader is dragged away.
+`liveItems` lets the reader follow your items while it is open.
 
 In the reader:
 
@@ -138,6 +140,24 @@ MediaReaderItem(
 
 The file itself is preferred. Where no engine shows it, the preview's
 own kind's engine shows the preview; failing that, the card.
+
+Your server makes a preview in its own time. Say where it has got:
+
+```dart
+preview: switch (file.derivatives.pdf) {
+  'ready' => MediaReaderPreview(source: ..., contentType: 'application/pdf'),
+  'preparing' => const MediaReaderPreview.preparing(),
+  'failed' => const MediaReaderPreview.failed(),
+  _ => null,
+},
+```
+
+A preview being prepared shows the file's card, saying so; one that
+could not be made says that. When your server is done, hand the reader
+the file again with the ready preview: `MediaReaderView` rebuilt with
+the new items, or `showMediaReader(liveItems: ...)`, a
+`ValueListenable` of the items the reader follows while it is open. The
+card gives way to the file, where it stands.
 
 ## The policy
 

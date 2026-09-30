@@ -128,6 +128,25 @@ void main() {
       await closePdf(tester);
     });
 
+    testWidgets('as the PDF a host made of an Office file', (tester) async {
+      await pumpPdfReader(tester, [
+        MediaReaderItem(
+          id: 'minutes',
+          name: 'Minutes.docx',
+          source: MediaReaderSource.bytes(Uint8List(8)),
+          preview: MediaReaderPreview(
+            source: MediaReaderSource.bytes(pdfOf(2)),
+            contentType: 'application/pdf',
+          ),
+        ),
+      ]);
+
+      await pumpPdf(tester, () => shows('1 of 2'));
+      // The chrome names the file, not its PDF.
+      expect(find.text('Minutes.docx'), findsOneWidget);
+      await settlePdf(tester);
+    });
+
     testWidgets('only when its page comes on screen', (tester) async {
       final host = FakeResolve();
       final transport = FakeTransport({'/1': pdfOf(2)});

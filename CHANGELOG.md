@@ -1,3 +1,18 @@
+## 0.7.0 — 2026-09-30
+
+Phase R7, derivatives (MEDIA_READER_PLAN.md):
+
+- `MediaReaderPreview.preparing()` and `.failed()`: where the host's
+  server has got with a derivative. A preview being prepared shows the
+  file's card, saying so; one that could not be made says that. A
+  ready preview is shown by its own kind's engine, as since R1: an
+  Office file through its PDF, a HEIC through its JPEG.
+- `showMediaReader(liveItems:)`: the reader follows the host's items
+  while it is open, so a preview the server finishes takes the card's
+  place where it stands.
+- The example shows an Office file through a PDF, and one whose PDF a
+  switch on the samples page finishes.
+
 ## 0.6.0 — 2026-09-30
 
 Phase R6, text, Markdown, tables and archives (MEDIA_READER_PLAN.md):

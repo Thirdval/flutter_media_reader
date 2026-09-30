@@ -783,22 +783,57 @@ void main() {
     });
   });
 
+  group('derivatives', () {
+    bool shows(String text) => find.text(text).evaluate().isNotEmpty;
+
+    testWidgets('an Office file is shown through the PDF the server made '
+        'of it', (tester) async {
+      await pumpExample(tester);
+      await open(tester, 'Budget 2026.xlsx');
+
+      await pumpUntil(tester, () => shows('1 of 300'));
+
+      // The file is named, not its PDF; the file itself was never asked
+      // for.
+      expect(find.textContaining('Budget 2026.xlsx'), findsWidgets);
+      expect(files.server.signed['Budget 2026.xlsx'], isNull);
+      expect(files.server.signed['Rota_October.pdf'], 1);
+    });
+
+    testWidgets('one the server is still preparing shows its card, and the '
+        'PDF once the server is done', (tester) async {
+      await pumpExample(tester);
+      await open(tester, 'Minutes.docx');
+      await pumpUntil(tester, () => shows('This file is being prepared.'));
+      expect(find.text('Try again'), findsNothing);
+
+      // The host hears from its server while the reader is open.
+      files.serverDone = true;
+      await pumpUntil(tester, () => shows('Password'));
+
+      await tester.enterText(find.byType(TextField), 'harvest');
+      await tester.tap(find.text('Open'));
+      await pumpUntil(tester, () => shows('1 of 2'));
+      files.serverDone = false;
+    });
+  });
+
   group('the shell', () {
     testWidgets('a file without an engine opens as its card, pages, and '
         'closes', (tester) async {
       await pumpExample(tester);
 
-      await open(tester, 'Budget 2026.xlsx');
+      await open(tester, 'model.glb');
 
       // The card after it has the same actions, and a phone's width puts
       // that page a hair's breadth on screen for a finder: only what can
       // be tapped is counted.
-      expect(find.text('Document · 57 KB'), findsOneWidget);
+      expect(find.text('File · 7 MB'), findsOneWidget);
       expect(find.text('Save to device').hitTestable(), findsOneWidget);
       expect(find.text('Share').hitTestable(), findsOneWidget);
 
       await swipeToNext(tester);
-      expect(find.text('File · 7 MB'), findsOneWidget);
+      expect(find.text('Archive · 100 MB'), findsOneWidget);
 
       await tester.sendKeyEvent(LogicalKeyboardKey.escape);
       await tester.pumpAndSettle();
@@ -826,9 +861,9 @@ void main() {
 
       await tester.tap(find.text("The host's chrome"));
       await tester.pumpAndSettle();
-      await open(tester, 'Budget 2026.xlsx');
+      await open(tester, 'model.glb');
       final position =
-          samples.indexWhere((sample) => sample.name == 'Budget 2026.xlsx') + 1;
+          samples.indexWhere((sample) => sample.name == 'model.glb') + 1;
       expect(find.text('$position of ${samples.length}'), findsOneWidget);
 
       await tester.tap(find.bySemanticsLabel('Close'));

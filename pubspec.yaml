@@ -1,6 +1,6 @@
 name: flutter_media_reader
 description: "An in-app reader for the files a host hands it: pictures, video, audio with waveforms, PDF, text, tables and archives, on every platform, through swappable engines."
-version: 0.6.0
+version: 0.7.0
 homepage: https://github.com/Thirdval/flutter_media_reader
 repository: https://github.com/Thirdval/flutter_media_reader
 issue_tracker: https://github.com/Thirdval/flutter_media_reader/issues
