@@ -20,6 +20,20 @@ same commit as the work, with an owner check after each phase.
 - The package is its own Flutter project, public under the Thirdval
   organisation, like `flutter_reader`, with its own Claude session
   (MR1).
+- Copying text is not an export in any kind of file, not only in a
+  PDF: it stays allowed under a no-download policy (MR9, R5, R6).
+
+**Owner decisions (2026-09-30, relayed by Tendvine's backend
+session):**
+- Copying text from a PDF is not an export: it stays allowed under a
+  no-download policy (MR9, R5).
+- The server makes no PDF thumbnails. Where the reader needs a PDF's
+  poster, it draws the first page itself (R5, B4).
+- Office files become PDFs in a separate converter container on the
+  server, so MR7 stands (B2).
+- A HEIC becomes a JPEG `display` variant on the server (B4, R7).
+- B1–B5 go ahead on the backend's recommendations, in this order: B5,
+  the repair of old rows, B1, B3, HEIC, B2 (§6).
 
 **Standing rules:** [CLAUDE.md](CLAUDE.md). English only. Push only
 when the owner asks.
@@ -241,9 +255,9 @@ Also exported for hosts:
 | MR4 | Audio behind one `AudioEngine`: `just_audio` on iOS, Android and macOS (audio session, interruptions); `video_player`/`fvp` audio-only on Windows and Linux | Recommended |
 | MR5 | PDF on `pdfrx` (PDFium, MIT, every platform; `PdfViewer.uri` takes auth headers, range access and progressive loading) | Recommended |
 | MR6 | Waveform peaks come from the host: the server computes them at upload, in-app recordings capture them while recording. No on-device extraction before 1.0; without peaks the bar shows a plain progress track | Recommended |
-| MR7 | Office formats are never parsed here: the host hands a PDF derivative as `preview` | Recommended |
+| MR7 | Office formats are never parsed here: the host hands a PDF derivative as `preview`. Tendvine's server makes it in a separate converter container (B2) | **Decided** 2026-09-30 |
 | MR8 | Nothing leaves the app: no `url_launcher`, `open_filex`, `share_plus` or other hand-off in `lib/` (a test reads the pubspec); export is only ever the host's action | **Decided** 2026-09-30 |
-| MR9 | Download policy: the host says whether export is allowed and where engines may cache. With export off, the chrome hides Share and Save and nothing is kept on disk. Tendvine's comes from a community setting (B3) | **Decided** 2026-09-30 |
+| MR9 | Download policy: the host says whether export is allowed and where engines may cache. With export off, the chrome hides Share and Save and nothing is kept on disk. Copying text is not an export, in any kind of file: it stays allowed with export off. Tendvine's comes from a community setting (B3) | **Decided** 2026-09-30 |
 | MR10 | The package draws a plain default chrome; hosts supply theirs through slot builders | Recommended |
 | MR11 | Sources resolve through the host (signed URLs, auth headers, the audited resolve); engines stream. The package owns no HTTP client beyond what an engine needs | Recommended |
 | MR12 | Markdown on `flutter_markdown_plus`; links go to the host's handler, never to a browser | Recommended |
@@ -251,7 +265,10 @@ Also exported for hosts:
 | MR14 | Tests: unit and widget tests with fake engines and sources; each adapter behind its interface; a manual platform matrix in the tracker; no goldens until the chrome settles | Recommended |
 
 The owner accepts or overrides each Recommended row; the session
-records the answer here.
+records the answer here. MR7's answer and the copy clause in MR9,
+for PDFs, reached this session through Tendvine's backend session on
+2026-09-30. The owner widened the clause to every kind of file in this
+session the same day.
 
 ---
 
@@ -360,8 +377,10 @@ records the answer here.
   - continuous pages, with a "1 of N" status for the chrome;
   - a page-thumbnails strip or sheet, and go to a page;
   - zoom.
-- **Text:** search and selection. Copying follows the policy — a
-  decision for the owner, whether copy counts as export.
+- **Text:** search and selection. Copying stays allowed under a
+  no-download policy: it is not an export (owner, 2026-09-30).
+- **Poster:** where a PDF needs one, the engine draws the first page
+  itself; the server makes no PDF thumbnails (owner, 2026-09-30).
 - **Passwords:** a host hook.
 - **Cache:** `pdfrx`'s download cache points to the host's directory
   or memory (check its cache hook).
@@ -381,6 +400,10 @@ records the answer here.
 - **Archives:** zip, tar and gz listed with sizes. An entry opens
   through the registry (within a size cap), and nested archives list
   in turn.
+- **Copying:** where text can be selected, copying it stays allowed
+  under a no-download policy: it is not an export, in any kind (owner,
+  2026-09-30). The owner accepts that Select All then Copy takes a
+  text or CSV file's whole content.
 - **Done when:** a 20 MB log and a 100,000-row CSV scroll smoothly,
   and a zip entry opens in its own engine.
 
@@ -483,21 +506,54 @@ R9 steps follow their phases.
 These asks belong to Tendvine's backend and app sessions.
 
 **Backend (Tendvine API):**
+
+On 2026-09-30 the owner said go on B1–B5, on the backend's
+recommendations (relayed by Tendvine's backend session). The backend
+works in this order: B5, the repair of old rows (posters, voice notes
+that show 0:00), B1, B3, HEIC (B4), B2. Its session announces the
+commit and a guide when each batch lands.
+
 - **B1 — Peaks and duration.** For audio and video, computed at upload
-  (about 100 normalised peaks and the duration in milliseconds) and
-  returned with the file. This also mends voice notes that show 0:00.
+  and returned with the file. This also mends voice notes that show
+  0:00.
+  - Agreed shape: `peaks` is exactly 100 values, 0..1, to two
+    decimals, and null until the file is processed; `durationSeconds`
+    comes beside it.
+  - Both are on the attachment, the list item and the resolve.
+  - Status: the next backend batch, after the repair of old rows.
 - **B2 — A PDF derivative for Office files** (Word, Excel, PowerPoint,
-  OpenDocument, RTF), made in the processing pipeline and resolved like
-  thumbnails, with "preparing" and "failed" states.
-- **B3 — The community download policy.** A setting such as "Members
-  can save and share files" (on or off, perhaps per role), exposed
-  through the member's capabilities and on each resolve. Viewing URLs
-  are served inline (`Content-Disposition: inline`). The audit tells a
-  view from an export.
-- **B4 — Derivatives the reader relies on:** HEIC/HEIF as JPEG, video
-  posters, PDF previews, all actually served.
+  OpenDocument, RTF), resolved like thumbnails, with "preparing" and
+  "failed" states.
+  - Decided: a separate converter container makes it (MR7).
+  - Status: last in the backend's order.
+- **B3 — The community download policy.**
+  - Agreed shape: a new permission, `files:export`, on in every role
+    by default; `canExport` on the member's capabilities and on each
+    resolve. It feeds `ReaderPolicy.canExport` (MR9).
+  - A resolve carries its intent, `view` or `export`. A view is served
+    inline; an export is audited and served as an attachment.
+  - The CDN already accepts a signed disposition
+    (`&disp=inline|attachment`); the backend starts sending it with
+    B3.
+  - Status: the next backend batch, after B1.
+- **B4 — Derivatives the reader relies on:** video posters, and a JPEG
+  `display` variant of each HEIC/HEIF (decided; R7 relies on it), all
+  actually served.
+  - Not PDF previews: the server makes no PDF thumbnails, and the
+    reader draws a PDF's first page itself (R5).
+  - Status: old posters are repaired in the next batch; HEIC comes
+    after B3.
 - **B5 — Range requests** on signed URLs, for streaming, seeking and
   PDF range access.
+  - Status: live on staging since 2026-09-30 (backend commit
+    `2bc0b819`).
+  - The backend session reports that every signed `cdn.tendvine.io`
+    URL answers 206 with `Content-Range` (open-ended and suffix ranges
+    too), 416 past the end, HEAD with `Content-Length`, and
+    `Accept-Ranges: bytes`; and that video seeking and `pdfrx`'s range
+    access work against staging.
+  - Checked from this repository's session: the Worker's source at
+    that commit. Not run from here: a request against the live edge.
 
 **App (Tendvine client):**
 - **A1:** R9a–R9d as above.
@@ -525,8 +581,9 @@ These asks belong to Tendvine's backend and app sessions.
 - **Where engines write:** `pdfrx` downloads and any player cache must
   land in the policy's cache or memory. Verify each engine in its
   phase.
-- **Copy and export:** does copying text from a PDF count as export
-  under a no-download policy? An owner decision in R5.
+- **Copy and export:** settled by the owner on 2026-09-30. Copying
+  text is not an export, in a PDF or any other kind of file, so it
+  stays allowed under a no-download policy (MR9, R5, R6).
 - **Live Text:** it needs native code on iOS (VisionKit). An owner
   decision in R8.
 
