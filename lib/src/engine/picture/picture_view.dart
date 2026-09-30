@@ -8,6 +8,8 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/semantics.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../../io/media_reader_fetcher.dart';
@@ -60,6 +62,7 @@ class _MediaReaderPictureViewState()
   int _pointers = 0;
   Offset _doubleTapAt = Offset.zero;
   ImageProvider? _sized;
+  final FocusNode _keys = FocusNode(debugLabel: 'MediaReaderPictureView');
 
   MediaReaderPage get _page => widget.page;
 
@@ -131,10 +134,71 @@ class _MediaReaderPictureViewState()
   /// A picture left unprepared is asked for once its page is on screen;
   /// the zoom does not outlive the page being there.
   void _onCurrent() {
-    if (_page.isCurrent.value) return unawaited(_prepare());
+    if (_page.isCurrent.value) {
+      _takeKeyboard();
+      return unawaited(_prepare());
+    }
     _glide.stop();
     _transform.value = Matrix4.identity();
     if (_detail != 1) setState(() => _detail = 1);
+    if (_keys.hasFocus) Focus.maybeOf(context)?.requestFocus();
+  }
+
+  /// The picture takes the keys that zoom it while the reader has the
+  /// keyboard, never from a field beside the reader.
+  void _takeKeyboard() {
+    if (!mounted || !_shown) return;
+    if (Focus.maybeOf(context)?.hasFocus ?? false) _keys.requestFocus();
+  }
+
+  /// Plus and minus zoom about the middle, zero goes back to rest (R8).
+  KeyEventResult _onKey(FocusNode node, KeyEvent event) {
+    if (event is KeyUpEvent) return KeyEventResult.ignored;
+    final by = switch (event.logicalKey) {
+      LogicalKeyboardKey.equal ||
+      LogicalKeyboardKey.add ||
+      LogicalKeyboardKey.numpadAdd => 1.5,
+      LogicalKeyboardKey.minus || LogicalKeyboardKey.numpadSubtract => 1 / 1.5,
+      LogicalKeyboardKey.digit0 || LogicalKeyboardKey.numpad0 => 0.0,
+      _ => null,
+    };
+    if (by == null) return KeyEventResult.ignored;
+    _zoomBy(by);
+    return KeyEventResult.handled;
+  }
+
+  /// Zooms [by] times about the middle of the screen; 0 goes to rest. A
+  /// key pressed again while the last zoom glides adds to where it is
+  /// going, not to where it is.
+  void _zoomBy(double by) {
+    final size = context.size;
+    if (size == null) return;
+    final from = _glide.isAnimating ? _gliding!.end! : _transform.value;
+    final scale = by == 0
+        ? 1.0
+        : (from.getMaxScaleOnAxis() * by).clamp(1.0, widget.engine.maxScale);
+    if (scale <= 1) return _glideTo(Matrix4.identity());
+    // What was in the middle stays in the middle, as far as the edges
+    // let it.
+    final middle = from.getMaxScaleOnAxis() <= 1
+        ? size.center(Offset.zero)
+        : MatrixUtils.transformPoint(
+            Matrix4.inverted(from),
+            size.center(Offset.zero),
+          );
+    _glideTo(
+      Matrix4.diagonal3Values(scale, scale, 1)..setTranslationRaw(
+        (size.width / 2 - middle.dx * scale).clamp(
+          -size.width * (scale - 1),
+          0,
+        ),
+        (size.height / 2 - middle.dy * scale).clamp(
+          -size.height * (scale - 1),
+          0,
+        ),
+        0,
+      ),
+    );
   }
 
   void _onPointer(int change) {
@@ -159,10 +223,22 @@ class _MediaReaderPictureViewState()
   void _glideTo(Matrix4 target) {
     if (MediaQuery.disableAnimationsOf(context)) {
       _transform.value = target;
-      return _sharpen();
+      _sharpen();
+      return _onGlideEnd();
     }
     _gliding = Matrix4Tween(begin: _transform.value.clone(), end: target);
-    unawaited(_glide.forward(from: 0).whenComplete(_sharpen));
+    unawaited(
+      _glide.forward(from: 0).whenComplete(() {
+        _sharpen();
+        _onGlideEnd();
+      }),
+    );
+  }
+
+  /// Zoomed in by a key, the picture owns drags; back at rest, it does
+  /// not.
+  void _onGlideEnd() {
+    if (mounted) _hold(_zoomed || _pointers > 1);
   }
 
   void _onGlide() {
@@ -219,6 +295,7 @@ class _MediaReaderPictureViewState()
       ..removeListener(_onTransform)
       ..dispose();
     _glide.dispose();
+    _keys.dispose();
     // With no cache allowed, the decoded picture goes with the page.
     if (_page.policy.cache is MediaReaderNoCache) unawaited(_sized?.evict());
     super.dispose();
@@ -243,38 +320,61 @@ class _MediaReaderPictureViewState()
           constraints.biggest,
           MediaQuery.devicePixelRatioOf(context),
         );
-        return Listener(
-          onPointerDown: (_) => _onPointer(1),
-          onPointerUp: (_) => _onPointer(-1),
-          onPointerCancel: (_) => _onPointer(-1),
-          child: GestureDetector(
-            onDoubleTapDown: (details) => _doubleTapAt = details.localPosition,
-            onDoubleTap: _onDoubleTap,
-            child: MediaQuery(
-              data: _zoomed ? MediaQuery.of(context) : _atRest(context),
-              child: InteractiveViewer(
-                transformationController: _transform,
-                minScale: 1,
-                maxScale: widget.engine.maxScale,
-                // At rest a drag is the shell's: to page, or to dismiss.
-                panEnabled: _zoomed,
-                onInteractionEnd: (_) => _sharpen(),
-                child: SizedBox.expand(
-                  child: Image(
-                    image: sized,
-                    fit: BoxFit.contain,
-                    // The picture stays while it is decoded with more
-                    // detail.
-                    gaplessPlayback: true,
-                    excludeFromSemantics: true,
-                    frameBuilder: (context, child, frame, _) {
-                      _shown = _shown || frame != null;
-                      return _shown ? child : waiting;
-                    },
-                    errorBuilder: (context, error, _) {
-                      _fail(error);
-                      return const SizedBox.expand();
-                    },
+        final strings = _page.chrome.strings;
+        return Focus(
+          focusNode: _keys,
+          onKeyEvent: _onKey,
+          // A screen reader zooms through actions: it has no pinch.
+          child: Semantics(
+            image: true,
+            customSemanticsActions: {
+              CustomSemanticsAction(label: strings.zoomIn): () => _zoomBy(1.5),
+              CustomSemanticsAction(label: strings.zoomOut): () =>
+                  _zoomBy(1 / 1.5),
+              CustomSemanticsAction(label: strings.zoomToFit): () => _zoomBy(0),
+            },
+            child: Listener(
+              onPointerDown: (_) => _onPointer(1),
+              onPointerUp: (_) => _onPointer(-1),
+              onPointerCancel: (_) => _onPointer(-1),
+              child: GestureDetector(
+                onDoubleTapDown: (details) =>
+                    _doubleTapAt = details.localPosition,
+                onDoubleTap: _onDoubleTap,
+                child: MediaQuery(
+                  data: _zoomed ? MediaQuery.of(context) : _atRest(context),
+                  child: InteractiveViewer(
+                    transformationController: _transform,
+                    minScale: 1,
+                    maxScale: widget.engine.maxScale,
+                    // At rest a drag is the shell's: to page, or to dismiss.
+                    panEnabled: _zoomed,
+                    onInteractionEnd: (_) => _sharpen(),
+                    child: SizedBox.expand(
+                      child: Image(
+                        image: sized,
+                        fit: BoxFit.contain,
+                        // The picture stays while it is decoded with more
+                        // detail.
+                        gaplessPlayback: true,
+                        excludeFromSemantics: true,
+                        frameBuilder: (context, child, frame, _) {
+                          if (!_shown && frame != null) {
+                            _shown = true;
+                            if (_page.isCurrent.value) {
+                              WidgetsBinding.instance.addPostFrameCallback(
+                                (_) => _takeKeyboard(),
+                              );
+                            }
+                          }
+                          return _shown ? child : waiting;
+                        },
+                        errorBuilder: (context, error, _) {
+                          _fail(error);
+                          return const SizedBox.expand();
+                        },
+                      ),
+                    ),
                   ),
                 ),
               ),

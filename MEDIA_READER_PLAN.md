@@ -247,8 +247,10 @@ class const MediaReaderChrome({
   topStart, topEnd, bottomStart, bottomEnd, contextPill, status,
   controls, // for what plays (R3), or for a document (R5)
   cardActions, // the host's actions on a file's card
+  menu, // the host's actions on a right-click or a long press (R8)
   background, foreground,
   contentInsets, // the room the slots take: a page that scrolls keeps it clear (R5)
+  railFromWidth, // the width from which the rail of files stands (R8)
   strings, // the words the package draws or speaks
 });
 
@@ -673,14 +675,15 @@ session the same day.
 - **Not run:** iOS (the owner runs iOS builds); Windows and Linux (no
   machine); a screen reader over a PDF's text, which `pdfrx` exposes
   when one is on.
-- **Known limits, left for R8:**
+- **Known limits:**
   - a drag down scrolls a PDF and does not dismiss it: the close
     button and Esc do;
   - a sideways drag over a PDF at its width goes between files when it
     starts as a finger does, from rest. A jump of more than twice the
     touch slop in one step is taken by the page;
-  - a match gone to by the search, or a page reached with Page Down,
-    may come under the top slots until the chrome is tapped away;
+  - a page reached with Page Down may come under the top slots until
+    the chrome is tapped away (a match gone to by the search comes
+    below them since R8);
   - the outline (bookmarks) is not shown.
 
 ### R6 — Text, tables, archives (M) · built
@@ -784,7 +787,7 @@ session the same day.
   the resolve of `variant: pdf` or `display` to items, which is the
   host's.
 
-### R8 — Platform polish (M)
+### R8 — Platform polish (M) · built
 
 - **Desktop:**
   - keyboard shortcuts (zoom, page, play);
@@ -798,6 +801,67 @@ session the same day.
   is a decision for the owner before any plugin is written.
 - **Done when:** the matrix in §5 is filled for every kind, with gaps
   named.
+- **Built (2026-09-30):**
+  - the keys: the space bar plays and pauses, M mutes, Shift with an
+    arrow seeks ten seconds, on whatever plays on the page on screen;
+    + and − zoom a picture about its middle and 0 fits it again, a
+    key pressed while the last zoom glides adding to where it is
+    going. A key typed into a field is the field's, and the space bar
+    on a button the button's. Page Up and Page Down, Home and End were
+    a PDF's and a text's already (R5, R6), and the arrows the shell's
+    (R1);
+  - `MediaReaderChrome.menu` (§2.2): the host's actions for the file
+    on screen, on a right-click or a long press with a finger, never
+    a mouse held down. The reader draws them in the chrome's colours
+    where the pointer is, above a finger, within the reader; a tap
+    elsewhere or Esc closes the menu, and so does paging away, and
+    the keys go back to where they were. What is under the menu is
+    not read by a screen reader while it is up. An engine's own menu
+    over text stands: a long press on a word selects it (R6), and a
+    right-click on a PDF gives its Copy and Select all (R5);
+  - the rail of files, `railFromWidth` (§2.2): from 900 pixels across
+    a rail stands at the start of the reader, at the end right to
+    left, with every file by its poster or its extension, the one on
+    screen outlined, a tap going to it — at once past a neighbour, so
+    the pages between are not brought on screen on the way. It scrolls
+    only as far as it must to keep the file on screen in view, hides
+    and returns with the chrome, and fades with a dismissing drag.
+    `double.infinity` removes it;
+  - less motion: a PDF's page or match gone to is there at once, as
+    the pager, a picture's zoom, the dismissal, the chrome, the strip
+    of pages and the busy ring were already. The reader reads it from
+    `MediaQuery.disableAnimations`, which is the platform's setting;
+  - a match gone to by the search comes below the chrome's top slots
+    and above its bottom ones, with a little room: the package's own
+    searcher over `pdfrx`'s (`MediaReaderPdfSearcher`), which also
+    paints the matches;
+  - text at 200 %, on a phone 320 pixels wide: nothing overflows. The
+    transport and the document bar grow to 150 % of the person's size,
+    as a toolbar does, and take two rows below 340 and 280 pixels at
+    that size (the scrubber above the buttons; the search's count and
+    arrows under its field); the document bar's tools wrap; the strip
+    of pages and the times shrink only where even that is too little.
+    The card, the titles and the files' own text grow the whole way;
+  - a screen reader: a picture is an image with the actions Zoom in,
+    Zoom out and Fit to screen; the rail's files are buttons with
+    "selected" on the one on screen; the menu is a group of buttons;
+    the rail comes last in the reading order (`MediaReaderOrder.rail`);
+  - right to left: the rail stands at the end, the shell pages
+    mirrored (R1), the bars run left to right as every player's do;
+  - 557 tests; two more integration tests (the menu, the rail).
+- **Blocked, for the owner (native code, MR2):**
+  - **picture in picture:** `video_player` offers none on iOS or
+    Android. It needs either a plugin with native code (`AVPictureIn
+    PictureController`, Android's `enterPictureInPictureMode` with the
+    activity's manifest flag) or a fork. Nothing was written;
+  - **iOS Live Text:** VisionKit's `ImageAnalysisInteraction` is
+    native code. Nothing was written.
+- **Not run:** iOS (the owner runs iOS builds), so no VoiceOver pass;
+  a TalkBack pass on the Pixel with a person, which the integration
+  test cannot make (it checks the semantics tree); Windows and Linux
+  (no machine): the right-click, the rail and the keys were run on
+  macOS only.
+- **Left:** a table is not scrolled sideways by the keyboard (R6).
 
 ### R9 — Adoption in Tendvine (M; the Tendvine session)
 
@@ -843,7 +907,7 @@ In every step:
 | R5 | PDF (`pdfrx`) | ☑ built 2026-09-30 — analyze clean, 395 tests, example run on Android and macOS | `b2f1290`; tag `v0.5.0` when the owner asks | ☐ |
 | R6 | Text, Markdown, tables, archives | ☑ built 2026-09-30 — analyze clean, 510 tests, example run on Android and macOS | `5dc5016`; tag `v0.6.0` when the owner asks | ☐ |
 | R7 | Derivatives: Office and HEIC through the host | ☑ built 2026-09-30 — analyze clean, 516 tests, example run on Android and macOS | the 0.7.0 commit; tag `v0.7.0` when the owner asks | ☐ |
-| R8 | Platform polish, accessibility, Live Text decision | ☐ | | ☐ |
+| R8 | Platform polish, accessibility, Live Text decision | ☑ built 2026-09-30 — analyze clean, 557 tests, example run on Android and macOS; PiP and Live Text blocked on the owner (native code) | the 0.8.0 commit; tag `v0.8.0` when the owner asks | ☐ |
 | R9a–d | Adoption in Tendvine (the Tendvine session) | ☐ | | ☐ |
 | R10 | 1.0 | ☐ | | ☐ |
 
@@ -859,6 +923,7 @@ In every step:
 | R5 | – | ✓ | ✓ | – | – |
 | R6 | – | ✓ | ✓ | – | – |
 | R7 | – | ✓ | ✓ | – | – |
+| R8 | – | ✓ | ✓ | – | – |
 
 Each ✓ is the example's integration test, run on a Pixel 10a with
 Android 17 and on macOS 27. iOS was not run: the owner runs iOS
@@ -890,6 +955,11 @@ builds. Windows and Linux were not run: no machine.
 - R7: thirty-one tests. An Office file shown through its PDF, its own
   bytes never asked for; one being prepared shown as its card, and as
   the PDF once the host said the server was done.
+- R8: thirty-three tests. The host's menu opened by a right-click on
+  macOS and a long press on the Pixel, its action the host's; on
+  macOS, whose window is now 1100 wide, the rail with the file on
+  screen marked and a text reached by a tap on it; on the Pixel, no
+  rail.
 
 Legend: ☐ not started · ◐ in progress · ☑ done (commit) · ✔ owner
 verified · ⊘ blocked (reason). Update the row in the same commit as

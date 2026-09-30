@@ -50,6 +50,7 @@ class _MediaReaderPdfViewState() extends State<MediaReaderPdfView> {
   double _viewWidth = 0;
   double _topInset = 0;
   double _bottomInset = 0;
+  bool _reduceMotion = false;
 
   MediaReaderPage get _page => widget.page;
 
@@ -124,7 +125,8 @@ class _MediaReaderPdfViewState() extends State<MediaReaderPdfView> {
     final handle = _handle = MediaReaderPdfDocument(
       document,
       controller,
-      topInset: () => _topInset,
+      insets: () => EdgeInsets.only(top: _topInset, bottom: _bottomInset),
+      reduceMotion: () => _reduceMotion,
     );
     _page.document.value = handle;
     handle.start();
@@ -323,6 +325,7 @@ class _MediaReaderPdfViewState() extends State<MediaReaderPdfView> {
     final safe = MediaQuery.paddingOf(context);
     _topInset = safe.top + chrome.contentInsets.top;
     _bottomInset = safe.bottom + chrome.contentInsets.bottom;
+    _reduceMotion = MediaQuery.disableAnimationsOf(context);
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewWidth = constraints.maxWidth;

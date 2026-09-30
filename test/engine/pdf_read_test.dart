@@ -40,6 +40,7 @@ void main() {
     VoidCallback? onDismissed,
     MediaReaderPolicy policy = const MediaReaderPolicy(),
     MediaReaderChrome chrome = const MediaReaderChrome(),
+    bool reduceMotion = false,
   }) async {
     await pumpReader(
       tester,
@@ -56,6 +57,7 @@ void main() {
       onDismissed: onDismissed,
       policy: policy,
       chrome: chrome,
+      reduceMotion: reduceMotion,
     );
     await pumpPdf(tester, () => shows('1 of 3'));
     await settlePdf(tester);
@@ -145,6 +147,43 @@ void main() {
       await settlePdf(tester, 5);
 
       expect(topOf(tester, 2), closeTo(56, 1));
+    });
+
+    testWidgets('where less motion is asked for, a page gone to is there '
+        'at once', (tester) async {
+      final page = await pumpRota(tester, reduceMotion: true);
+
+      unawaited(page.document.value!.goToPage(3));
+      await tester.pump();
+
+      expect(topOf(tester, 3), closeTo(56, 1));
+    });
+
+    testWidgets('a match gone to comes below the top slots', (tester) async {
+      final page = await pumpRota(tester);
+      final document = page.document.value!;
+      unawaited(document.goToPage(3));
+      await pumpPdf(tester, () => shows('3 of 3'));
+      await settlePdf(tester);
+
+      // The first match is back on the first page, at its second line.
+      document.search('harvest');
+      await pumpPdf(tester, () => document.state.value.matchNumber == 1);
+      await pumpPdf(tester, () => shows('1 of 3'));
+      await settlePdf(tester, 5);
+
+      final view = controller(tester);
+      final match = await tester.runAsync(() async {
+        final text = await view.document.pages[0].loadStructuredText();
+        return await text.allMatches('harvest', caseInsensitive: true).first;
+      });
+      final rect = MatrixUtils.transformRect(
+        view.value,
+        view.calcRectForRectInsidePage(pageNumber: 1, rect: match!.bounds),
+      );
+      // Below the plain chrome's top row, with a little room.
+      expect(rect.top, closeTo(56 + 24, 1));
+      await settlePdf(tester);
     });
 
     testWidgets("a host's taller slots, and the screen's own edges, are "

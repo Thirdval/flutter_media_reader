@@ -47,6 +47,16 @@ typedef MediaReaderSlotBuilder = Widget Function(
   MediaReaderState state,
 );
 
+/// One thing a menu offers.
+typedef MediaReaderMenuAction = ({String label, VoidCallback onPressed});
+
+/// Builds the host's menu for the file on screen: what a right-click or
+/// a long press on the canvas offers. Empty shows none.
+typedef MediaReaderMenuBuilder = List<MediaReaderMenuAction> Function(
+  BuildContext context,
+  MediaReaderState state,
+);
+
 /// The reader's chrome. A slot left null shows its plain default; a
 /// builder that returns an empty box leaves the slot empty.
 class const MediaReaderChrome({
@@ -81,6 +91,18 @@ class const MediaReaderChrome({
   /// The host's actions on a file's card: save, share. Empty by default,
   /// because export is only ever the host's action (MR8).
   final MediaReaderSlotBuilder? cardActions,
+
+  /// The host's actions for the file on screen, on a right-click or a
+  /// long press with a finger on the canvas: reply, forward, and Share
+  /// where the policy allows. None by default. An engine's own menu over
+  /// selected text stands where there is one (R8).
+  final MediaReaderMenuBuilder? menu,
+
+  /// The width, in pixels, from which a rail of the files stands at the
+  /// start of the reader, each shown by its poster or its kind, the one
+  /// on screen marked; a tap goes to a file. It hides with the rest of
+  /// the chrome. `double.infinity` shows none (R8).
+  final double railFromWidth = 900,
 
   /// The canvas.
   final Color background = const Color(0xFF000000),

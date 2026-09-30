@@ -44,16 +44,19 @@ class const MediaReaderTransportBar({
     unawaited(playback.setSpeed(speeds[(at + 1) % speeds.length]));
   }
 
+  /// The bar's text grows to this much of the person's size: it is a
+  /// compact strip, as a toolbar is (R8).
+  static const double maxTextScale = 1.5;
+
+  /// Below this width, at the text's size, the scrubber has a row of its
+  /// own above the buttons.
+  static const double _oneRowFrom = 340;
+
   @override
-  Widget build(BuildContext context) {
-    final strings = chrome.strings;
-    final colour = chrome.foreground;
-    const time = TextStyle(
-      fontSize: 12,
-      fontFeatures: [FontFeature.tabularFigures()],
-    );
-    return Directionality(
-      textDirection: TextDirection.ltr,
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.ltr,
+    child: MediaQuery.withClampedTextScaling(
+      maxScaleFactor: maxTextScale,
       child: ValueListenableBuilder(
         valueListenable: playback.state,
         builder: (context, state, _) => DecoratedBox(
@@ -63,51 +66,103 @@ class const MediaReaderTransportBar({
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              children: [
-                MediaReaderGlyphButton(
-                  glyph: state.playing
-                      ? MediaReaderGlyph.pause
-                      : MediaReaderGlyph.play,
-                  label: state.playing ? strings.pause : strings.play,
-                  colour: colour,
-                  onPressed: () => _toggle(state),
-                ),
-                Text(formatPlaybackTime(state.position), style: time),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    child: MediaReaderWaveform(
-                      position: state.position,
-                      duration: state.duration,
-                      buffered: state.buffered,
-                      peaks: peaks,
-                      onSeek: (position) =>
-                          unawaited(playback.seekTo(position)),
-                      color: colour,
-                      semanticLabel: strings.seek,
-                    ),
-                  ),
-                ),
-                if (state.remaining case final remaining?)
-                  Text('-${formatPlaybackTime(remaining)}', style: time),
-                MediaReaderTextButton(
-                  text: strings.speed(state.speed),
-                  onPressed: () => _nextSpeed(state),
-                ),
-                MediaReaderGlyphButton(
-                  glyph: state.muted
-                      ? MediaReaderGlyph.muted
-                      : MediaReaderGlyph.sound,
-                  label: state.muted ? strings.unmute : strings.mute,
-                  colour: colour,
-                  onPressed: () => unawaited(playback.setMuted(!state.muted)),
-                ),
-              ],
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final scale = MediaQuery.textScalerOf(context).scale(1);
+                return constraints.maxWidth < _oneRowFrom * scale
+                    ? _twoRows(state)
+                    : _oneRow(state);
+              },
             ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+
+  static const TextStyle _time = TextStyle(
+    fontSize: 12,
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
+
+  Widget _oneRow(MediaReaderPlaybackState state) => Row(
+    children: [
+      _playButton(state),
+      Text(formatPlaybackTime(state.position), style: _time),
+      Expanded(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: _scrubber(state),
+        ),
+      ),
+      if (state.remaining case final remaining?)
+        Text('-${formatPlaybackTime(remaining)}', style: _time),
+      ..._trailing(state),
+    ],
+  );
+
+  /// The times share what is left between the buttons, and shrink only
+  /// where even that is too little.
+  Widget _twoRows(MediaReaderPlaybackState state) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
+        child: _scrubber(state),
+      ),
+      Row(
+        children: [
+          _playButton(state),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(formatPlaybackTime(state.position), style: _time),
+            ),
+          ),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(switch (state.remaining) {
+                null => '',
+                final remaining => '-${formatPlaybackTime(remaining)}',
+              }, style: _time),
+            ),
+          ),
+          ..._trailing(state),
+        ],
+      ),
+    ],
+  );
+
+  Widget _playButton(MediaReaderPlaybackState state) => MediaReaderGlyphButton(
+    glyph: state.playing ? MediaReaderGlyph.pause : MediaReaderGlyph.play,
+    label: state.playing ? chrome.strings.pause : chrome.strings.play,
+    colour: chrome.foreground,
+    onPressed: () => _toggle(state),
+  );
+
+  Widget _scrubber(MediaReaderPlaybackState state) => MediaReaderWaveform(
+    position: state.position,
+    duration: state.duration,
+    buffered: state.buffered,
+    peaks: peaks,
+    onSeek: (position) => unawaited(playback.seekTo(position)),
+    color: chrome.foreground,
+    semanticLabel: chrome.strings.seek,
+  );
+
+  List<Widget> _trailing(MediaReaderPlaybackState state) => [
+    MediaReaderTextButton(
+      text: chrome.strings.speed(state.speed),
+      onPressed: () => _nextSpeed(state),
+    ),
+    MediaReaderGlyphButton(
+      glyph: state.muted ? MediaReaderGlyph.muted : MediaReaderGlyph.sound,
+      label: state.muted ? chrome.strings.unmute : chrome.strings.mute,
+      colour: chrome.foreground,
+      onPressed: () => unawaited(playback.setMuted(!state.muted)),
+    ),
+  ];
 }

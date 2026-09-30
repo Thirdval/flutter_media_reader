@@ -7,6 +7,7 @@ library;
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_media_reader/flutter_media_reader.dart';
@@ -130,6 +131,12 @@ void main() {
   final apple =
       defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.macOS;
+  final desktop = switch (defaultTargetPlatform) {
+    TargetPlatform.macOS ||
+    TargetPlatform.windows ||
+    TargetPlatform.linux => true,
+    _ => false,
+  };
 
   Future<void> doubleTap(WidgetTester tester) async {
     final centre = tester.getCenter(find.byType(InteractiveViewer));
@@ -882,6 +889,74 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(MediaReaderView), findsNothing);
+    });
+
+    testWidgets("the host's menu opens over the canvas, and its action is "
+        "the host's", (tester) async {
+      await pumpExample(tester);
+      await open(tester, 'model.glb');
+      final centre = tester.getCenter(find.byType(PageView));
+
+      // A right-click on a desktop, a long press on a phone.
+      if (desktop) {
+        await tester.tapAt(
+          centre,
+          buttons: kSecondaryButton,
+          kind: PointerDeviceKind.mouse,
+        );
+      } else {
+        await tester.longPressAt(centre);
+      }
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // The capsule's Forward, and the menu's over it.
+      expect(inReader(find.text('Forward')), findsNWidgets(2));
+      await tester.tap(inReader(find.text('Forward')).last);
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Forward: model.glb'), findsOneWidget);
+      expect(inReader(find.text('Forward')), findsOneWidget);
+    });
+
+    testWidgets('on a wide window, the rail lists the files, and a tap goes '
+        'to one', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpExample(tester);
+      await open(tester, 'model.glb');
+      final rail = find.bySemanticsLabel('Files');
+
+      if (tester.getSize(find.byType(MediaReaderView)).width < 900) {
+        // A phone: the rail is for a wider window.
+        expect(rail, findsNothing);
+        semantics.dispose();
+        return;
+      }
+      expect(rail, findsOneWidget);
+      // The file on screen is marked.
+      expect(
+        tester.getSemantics(
+          find.descendant(
+            of: rail,
+            matching: find.bySemanticsLabel(RegExp('^model.glb, ')),
+          ),
+        ),
+        matchesSemantics(
+          isButton: true,
+          hasSelectedState: true,
+          isSelected: true,
+          hasTapAction: true,
+        ),
+      );
+
+      await tester.tap(
+        find.descendant(of: rail, matching: find.text('Sermon notes.txt')),
+      );
+      await pumpUntil(tester, () => shows('Search'));
+
+      // The card gave way to the text, far down the list, at once.
+      expect(find.text('File · 7 MB'), findsNothing);
+      expect(inReader(find.text('Sermon notes.txt')), findsWidgets);
+      semantics.dispose();
     });
   });
 }

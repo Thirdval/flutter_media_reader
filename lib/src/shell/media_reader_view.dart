@@ -15,6 +15,7 @@ import '../item/media_reader_item.dart';
 import '../item/media_reader_policy.dart';
 import '../item/media_reader_resolver.dart';
 import '../item/media_reader_source.dart';
+import 'canvas_menu.dart';
 import 'chrome_layer.dart';
 import 'dismissible.dart';
 import 'media_reader_chrome.dart';
@@ -22,6 +23,9 @@ import 'media_reader_document.dart';
 import 'media_reader_page.dart';
 import 'media_reader_playback.dart';
 import 'page_host.dart';
+import 'playback_keys.dart';
+import 'rail.dart';
+import 'reader_layout.dart';
 
 /// The reader, as a widget: embed it in a pane, or open it as a route
 /// with `showMediaReader`.
@@ -80,6 +84,9 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
 
   /// The document on the page on screen, in the same way.
   final ValueNotifier<MediaReaderDocument?> _document = ValueNotifier(null);
+
+  /// Where the host's menu is open, when it is.
+  final ValueNotifier<MediaReaderMenuAnchor?> _menuAt = ValueNotifier(null);
   final Map<String, MediaReaderPage> _pages = {};
   final Map<(String, bool), MediaReaderResolver> _resolvers = {};
   MediaReaderPage? _watched;
@@ -165,6 +172,7 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
     if (page == null || page == _index) return;
     if (page < 0 || page >= widget.items.length) return;
     _index = page;
+    _menuAt.value = null;
     _watch();
     _whenNotBuilding(() => setState(() {}));
     _announce();
@@ -182,10 +190,15 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
     );
   }
 
-  void _step(int by) {
-    final to = _index + by;
+  void _step(int by) => _goTo(_index + by);
+
+  /// Goes to the item at [to]: gliding to a neighbour, at once further,
+  /// so that the pages in between are not brought on screen on the way.
+  void _goTo(int to) {
     if (to < 0 || to >= widget.items.length || !_pager.hasClients) return;
-    if (MediaQuery.disableAnimationsOf(context)) return _pager.jumpToPage(to);
+    if ((to - _index).abs() > 1 || MediaQuery.disableAnimationsOf(context)) {
+      return _pager.jumpToPage(to);
+    }
     unawaited(
       _pager.animateToPage(
         to,
@@ -194,6 +207,18 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
       ),
     );
   }
+
+  /// What the chrome's slots and the host's menu are told.
+  MediaReaderState _state() => MediaReaderState(
+    item: widget.items[_index],
+    index: _index,
+    count: widget.items.length,
+    policy: widget.policy,
+    status: _status.value,
+    playback: _playback.value,
+    document: _document.value,
+    close: widget.onDismissed,
+  );
 
   @override
   void initState() {
@@ -247,6 +272,7 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
     _status.dispose();
     _playback.dispose();
     _document.dispose();
+    _menuAt.dispose();
     super.dispose();
   }
 
@@ -277,6 +303,9 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
       child: Focus(
         focusNode: _focus,
         autofocus: widget.autofocus,
+        // The space bar, M and Shift with an arrow drive what plays on
+        // the page on screen (R8).
+        onKeyEvent: (node, event) => playbackKeys(_playback.value, event),
         child: DefaultTextStyle(
           style: TextStyle(
             color: chrome.foreground,
@@ -287,80 +316,63 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
           child: Semantics(
             container: true,
             explicitChildNodes: true,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                ValueListenableBuilder(
-                  valueListenable: _dismissing,
-                  builder: (context, dismissing, _) => ColoredBox(
-                    color: chrome.background.withValues(
-                      alpha: chrome.background.a * (1 - dismissing),
-                    ),
-                  ),
-                ),
-                Semantics(
-                  container: true,
-                  sortKey: const OrdinalSortKey(MediaReaderOrder.page),
-                  child: MediaReaderDismissible(
-                    enabled:
-                        close != null && !(page?.holdsDismiss.value ?? false),
-                    progress: _dismissing,
-                    onDismissed: close ?? () {},
-                    child: PageView.builder(
-                      controller: _pager,
-                      // The neighbours are built, so they can prepare; pages
-                      // further off are released.
-                      allowImplicitScrolling: true,
-                      physics: page?.holdsPaging.value ?? false
-                          ? const NeverScrollableScrollPhysics()
-                          : null,
-                      itemCount: items.length,
-                      findChildIndexCallback: (key) =>
-                          key is ValueKey<String> ? indexOf[key.value] : null,
-                      itemBuilder: (context, index) => MediaReaderPageHost(
-                        key: ValueKey<String>(items[index].id),
-                        item: items[index],
-                        index: index,
-                        count: items.length,
-                        current: index == _index,
-                        policy: widget.policy,
-                        chrome: chrome,
-                        engines: widget.engines,
-                        chromeVisible: _chromeVisible,
-                        close: close,
-                        onLink: widget.onLink,
-                        resolverFor: _resolverFor,
-                        onAttached: _attach,
-                        onDetached: _detach,
-                      ),
-                    ),
-                  ),
-                ),
-                MediaReaderChromeLayer(
-                  visible: _chromeVisible,
-                  dismissing: _dismissing,
-                  child: ListenableBuilder(
-                    listenable: Listenable.merge([
-                      _status,
-                      _playback,
-                      _document,
-                    ]),
-                    builder: (context, _) => MediaReaderChromeSlots(
+            child: MediaReaderLayout(
+              chrome: chrome,
+              chromeVisible: _chromeVisible,
+              dismissing: _dismissing,
+              menuAt: _menuAt,
+              state: _state,
+              canvas: Semantics(
+                container: true,
+                sortKey: const OrdinalSortKey(MediaReaderOrder.page),
+                child: MediaReaderDismissible(
+                  enabled:
+                      close != null && !(page?.holdsDismiss.value ?? false),
+                  progress: _dismissing,
+                  onDismissed: close ?? () {},
+                  child: PageView.builder(
+                    controller: _pager,
+                    // The neighbours are built, so they can prepare; pages
+                    // further off are released.
+                    allowImplicitScrolling: true,
+                    physics: page?.holdsPaging.value ?? false
+                        ? const NeverScrollableScrollPhysics()
+                        : null,
+                    itemCount: items.length,
+                    findChildIndexCallback: (key) =>
+                        key is ValueKey<String> ? indexOf[key.value] : null,
+                    itemBuilder: (context, index) => MediaReaderPageHost(
+                      key: ValueKey<String>(items[index].id),
+                      item: items[index],
+                      index: index,
+                      count: items.length,
+                      current: index == _index,
+                      policy: widget.policy,
                       chrome: chrome,
-                      state: MediaReaderState(
-                        item: item,
-                        index: _index,
-                        count: items.length,
-                        policy: widget.policy,
-                        status: _status.value,
-                        playback: _playback.value,
-                        document: _document.value,
-                        close: close,
-                      ),
+                      engines: widget.engines,
+                      chromeVisible: _chromeVisible,
+                      close: close,
+                      onLink: widget.onLink,
+                      resolverFor: _resolverFor,
+                      onAttached: _attach,
+                      onDetached: _detach,
                     ),
                   ),
                 ),
-              ],
+              ),
+              slots: ListenableBuilder(
+                listenable: Listenable.merge([_status, _playback, _document]),
+                builder: (context, _) =>
+                    MediaReaderChromeSlots(chrome: chrome, state: _state()),
+              ),
+              rail: items.length > 1
+                  ? MediaReaderRail(
+                      items: items,
+                      index: _index,
+                      chrome: chrome,
+                      onSelect: _goTo,
+                    )
+                  : null,
             ),
           ),
         ),

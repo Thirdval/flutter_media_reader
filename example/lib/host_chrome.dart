@@ -29,15 +29,24 @@ final MediaReaderChrome hostChrome = MediaReaderChrome(
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _Action('Reply', onPressed: () {}),
-        _Action('Forward', onPressed: () {}),
+        _Action('Reply', onPressed: () => _say(context, 'Reply', state)),
+        _Action('Forward', onPressed: () => _say(context, 'Forward', state)),
         // Export is the host's action, and only where its policy allows.
-        if (state.canExport) _Action('Share', onPressed: () {}),
+        if (state.canExport)
+          _Action('Share', onPressed: () => _say(context, 'Share', state)),
       ],
     ),
   ),
-  bottomEnd: (context, state) =>
-      _Capsule(child: _Action('More', onPressed: () {})),
+  bottomEnd: (context, state) => _Capsule(
+    child: _Action('More', onPressed: () => _say(context, 'More', state)),
+  ),
+  // The same actions on a right-click, or a long press with a finger.
+  menu: (context, state) => [
+    (label: 'Reply', onPressed: () => _say(context, 'Reply', state)),
+    (label: 'Forward', onPressed: () => _say(context, 'Forward', state)),
+    if (state.canExport)
+      (label: 'Share', onPressed: () => _say(context, 'Share', state)),
+  ],
   contextPill: (context, state) => switch (state.item.data) {
     Shared(:final where) => _Capsule(child: Text('Shared in $where')),
     _ => const SizedBox.shrink(),
@@ -53,6 +62,11 @@ final MediaReaderChrome hostChrome = MediaReaderChrome(
   // the bottom.
   contentInsets: const EdgeInsets.only(top: 72, bottom: 212),
 );
+
+/// What this host does for an action: says so, under the reader.
+void _say(BuildContext context, String action, MediaReaderState state) =>
+    ScaffoldMessenger.maybeOf(context)
+        ?.showSnackBar(SnackBar(content: Text('$action: ${state.item.name}')));
 
 class const _Capsule({required final Widget child}) extends StatelessWidget {
   @override

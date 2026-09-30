@@ -96,6 +96,16 @@ class const MediaReaderStrings({
 
   /// On the card, when a file asks for a password the host did not give.
   final String locked = 'This file is protected by a password.',
+
+  /// What a screen reader calls the host's menu over the canvas, and the
+  /// rail of files on a wide window (R8).
+  final String menu = 'Actions',
+  final String rail = 'Files',
+
+  /// A picture's zoom, as actions for a screen reader (R8).
+  final String zoomIn = 'Zoom in',
+  final String zoomOut = 'Zoom out',
+  final String zoomToFit = 'Fit to screen',
 });
 
 String _pageNumber(int number) => 'Page $number';

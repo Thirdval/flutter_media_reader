@@ -158,13 +158,17 @@ Future<void> pumpReader(
   /// The device's touch slop, where it reports one: a phone's is about
   /// half of Flutter's own.
   double? touchSlop,
+
+  /// The person has asked the platform for less motion.
+  bool reduceMotion = false,
 }) => tester.pumpWidget(
   WidgetsApp(
     color: const Color(0xFF000000),
     builder: (context, _) => MediaQuery(
-      data: MediaQuery.of(
-        context,
-      ).copyWith(gestureSettings: DeviceGestureSettings(touchSlop: touchSlop)),
+      data: MediaQuery.of(context).copyWith(
+        gestureSettings: DeviceGestureSettings(touchSlop: touchSlop),
+        disableAnimations: reduceMotion,
+      ),
       child: Directionality(
         textDirection: textDirection,
         child: MediaReaderView(

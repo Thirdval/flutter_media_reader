@@ -22,6 +22,7 @@ abstract final class MediaReaderOrder() {
   static const double contextPill = 5;
   static const double bottomStart = 6;
   static const double bottomEnd = 7;
+  static const double rail = 8;
 }
 
 /// Shows and hides the chrome, and fades it as a dismissing drag goes on.

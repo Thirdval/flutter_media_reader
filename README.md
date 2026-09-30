@@ -61,16 +61,34 @@ In the reader:
 
 - **Paging.** A drag sideways goes between files. The two neighbours
   are built so they can prepare; pages further off are released.
-- **Keyboard.** The arrows go between files, mirrored right to left.
-  Esc dismisses.
 - **Dismissing.** A drag down dismisses once it is long or fast
   enough, and settles back otherwise. A mouse does not drag; the close
   button and Esc are for it.
 - **Chrome.** A tap on the canvas hides the chrome and another brings
   it back. With a screen reader or switch control it stays.
+- **Keyboard.** The arrows go between files, mirrored right to left,
+  and Esc dismisses. The space bar plays and pauses what plays, M
+  mutes, Shift with an arrow seeks ten seconds; a picture zooms with
+  + and −, and 0 fits it again; a document scrolls with Page Up and
+  Page Down, Home and End. Keys typed into a field, and the space bar
+  on a button, are theirs.
+- **A menu.** A right-click, or a long press with a finger, opens your
+  `menu` for the file on screen where the pointer is. An engine's own
+  menu over selected text stands where there is one.
+- **A wide window.** From 900 pixels across, a rail of the files
+  stands at the start, each by its poster or its kind, the one on
+  screen marked; a tap goes to it. It hides with the chrome.
+  `railFromWidth` moves the threshold, and `double.infinity` removes
+  the rail.
 - **Accessibility.** Each page says its file and its place, and is
-  announced when it comes on screen. The slots and the page come in
-  reading order.
+  announced when it comes on screen; the slots, the page and the rail
+  come in reading order. A picture offers Zoom in, Zoom out and Fit to
+  screen as actions to a screen reader. Where the platform asks for
+  less motion, nothing glides: pages, zooms, the chrome and a PDF's
+  pages change at once. The card, the titles and the files' own text
+  grow with the platform's text size; the transport and the document
+  bar grow to 150 % and take two rows on a narrow screen, as toolbars
+  do.
 
 `MediaReaderView` is the same reader as a widget, for a pane:
 
@@ -198,6 +216,7 @@ the page (`playback`) or the document on it (`document`), and
 | `controls` | The controls for what plays, or for a document | For what plays, a bar: play, a scrubber or the waveform, time, speed, mute. For a document, its pages and its search |
 | `status` | The engine's status: "1 of 15", a time | A pill, while there is one |
 | `cardActions` | Your actions on a file's card: save, share | Empty |
+| `menu` | Your actions on a right-click or a long press: a list of `(label, onPressed)` | None |
 
 ```dart
 MediaReaderChrome(
@@ -224,6 +243,10 @@ MediaReaderChrome(
   PDF's first page starts below your top slots, and its last page can
   be brought above your bottom ones. The default suits the plain
   chrome.
+- `menu` builds the actions for the file on screen; the reader draws
+  them in your colours where the pointer is, and closes the menu when
+  one is chosen. `railFromWidth` is the width from which the rail of
+  files shows.
 
 ## Engines
 
@@ -302,10 +325,11 @@ MediaReaderPictureEngine(transport: YourTransport(dio))
 | HEIC elsewhere | Through its `preview`, the JPEG your server makes |
 | SVG, AVIF | The card |
 
-- **Zoom.** Pinch, double tap, or the mouse wheel, up to 8 times. A
-  double tap goes to 2.5 times at the point tapped, and back. A zoomed
-  picture pans within its edges. The zoom is gone when the page is
-  left.
+- **Zoom.** Pinch, double tap, the mouse wheel, or + and − on the
+  keyboard, up to 8 times. A double tap goes to 2.5 times at the point
+  tapped, and back; 0 fits the picture again. A zoomed picture pans
+  within its edges. The zoom is gone when the page is left. A screen
+  reader zooms through the picture's actions.
 - **Gestures.** At rest a drag is the shell's: it pages or dismisses.
   While the picture is zoomed, or two fingers are on it, drags are the
   picture's.

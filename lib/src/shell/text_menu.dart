@@ -1,19 +1,18 @@
 /// The plain menu the reader shows over selected text (MR9, MR10): Copy
 /// and Select all, and nothing that takes the text out of the app another
-/// way.
+/// way. The host's menu over the canvas is drawn the same way, down (R8).
 library;
 
 import 'package:flutter/widgets.dart';
 
 import 'media_reader_chrome.dart';
 
-/// One thing the menu offers.
-typedef MediaReaderTextMenuAction = ({String label, VoidCallback onPressed});
-
-/// A row of short words, each a button, in the chrome's colours.
+/// A line of short words, each a button, in the chrome's colours: across
+/// over a selection, down as a menu at the pointer.
 class const MediaReaderTextMenu({
-  required final List<MediaReaderTextMenuAction> actions,
+  required final List<MediaReaderMenuAction> actions,
   required final MediaReaderChrome chrome,
+  final Axis direction = Axis.horizontal,
   super.key,
 }) extends StatelessWidget {
   @override
@@ -32,32 +31,42 @@ class const MediaReaderTextMenu({
         fontWeight: FontWeight.w500,
         decoration: TextDecoration.none,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          for (final action in actions)
-            Semantics(
-              button: true,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: action.onPressed,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(minHeight: 40),
-                    child: Center(
-                      widthFactor: 1,
-                      heightFactor: 1,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
-                        child: Text(action.label),
+      // Down, the menu is as wide as its widest word, no wider.
+      child: IntrinsicWidth(
+        child: Flex(
+          direction: direction,
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: direction == Axis.vertical
+              ? CrossAxisAlignment.stretch
+              : CrossAxisAlignment.center,
+          children: [
+            for (final action in actions)
+              Semantics(
+                button: true,
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: action.onPressed,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 40),
+                      child: Align(
+                        alignment: direction == Axis.vertical
+                            ? AlignmentDirectional.centerStart
+                            : Alignment.center,
+                        widthFactor: 1,
+                        heightFactor: 1,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          child: Text(action.label),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     ),
   );

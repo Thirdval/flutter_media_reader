@@ -139,9 +139,16 @@ class _MediaReaderDocumentPagesState() extends State<MediaReaderDocumentPages> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Text(
-                    strings.position(state.pageNumber, state.pageCount),
-                    style: const TextStyle(fontSize: 13),
+                  // Shrinks only where the width has no room for it.
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        strings.position(state.pageNumber, state.pageCount),
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    ),
                   ),
                 ],
               ),

@@ -4,7 +4,7 @@
 /// never leave the app: exporting is the host's action, under the
 /// host's policy.
 ///
-/// Pre-release: phase R7 of MEDIA_READER_PLAN.md. The reader's shell and
+/// Pre-release: phase R8 of MEDIA_READER_PLAN.md. The reader's shell and
 /// its host contract are here — `showMediaReader` and [MediaReaderView],
 /// items and their sources, the policy, the chrome's slots, and the
 /// registry of engines — with the engines for pictures, video, audio,

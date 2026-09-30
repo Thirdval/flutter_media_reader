@@ -67,18 +67,30 @@ class _MediaReaderDocumentBarState() extends State<MediaReaderDocumentBar> {
     super.dispose();
   }
 
+  /// Below this width, at the text's size, the search's count and arrows
+  /// have a row of their own under the field.
+  static const double _oneRowFrom = 280;
+
   @override
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.ltr,
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (_showing == _Showing.pages) ...[
-          MediaReaderDocumentPages(document: _document, chrome: widget.chrome),
-          const SizedBox(height: 8),
+    // The bar's text grows to 150 % of the person's size: it is a compact
+    // strip, as a toolbar is (R8).
+    child: MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.5,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_showing == _Showing.pages) ...[
+            MediaReaderDocumentPages(
+              document: _document,
+              chrome: widget.chrome,
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (_showing == _Showing.search) _search() else _tools(),
         ],
-        if (_showing == _Showing.search) _search() else _tools(),
-      ],
+      ),
     ),
   );
 
@@ -100,8 +112,10 @@ class _MediaReaderDocumentBarState() extends State<MediaReaderDocumentBar> {
       child: _bar(
         child: ValueListenableBuilder(
           valueListenable: _document.state,
-          builder: (context, state, _) => Row(
-            mainAxisSize: MainAxisSize.min,
+          // Too many for the width, the tools go on to a second line.
+          builder: (context, state, _) => Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               // A text has no pages to show in a strip.
               if (state.pageCount > 0)
@@ -136,77 +150,107 @@ class _MediaReaderDocumentBarState() extends State<MediaReaderDocumentBar> {
     );
   }
 
-  Widget _search() {
-    final strings = widget.chrome.strings;
-    final colour = widget.chrome.foreground;
-    return CallbackShortcuts(
-      // Esc ends the search before it closes the reader.
-      bindings: {const SingleActivator(LogicalKeyboardKey.escape): _endSearch},
-      child: _bar(
-        child: ValueListenableBuilder(
-          valueListenable: _document.state,
-          builder: (context, state, _) {
-            final found = state.matchCount > 0;
-            return Row(
+  Widget _search() => CallbackShortcuts(
+    // Esc ends the search before it closes the reader.
+    bindings: {const SingleActivator(LogicalKeyboardKey.escape): _endSearch},
+    child: _bar(
+      child: ValueListenableBuilder(
+        valueListenable: _document.state,
+        builder: (context, state, _) => LayoutBuilder(
+          builder: (context, constraints) {
+            final scale = MediaQuery.textScalerOf(context).scale(1);
+            final field = Expanded(child: _field());
+            final count = Text(
+              switch (state) {
+                _ when state.query.isEmpty => '',
+                _ when state.matchCount > 0 => widget.chrome.strings.position(
+                  state.matchNumber,
+                  state.matchCount,
+                ),
+                _ when state.searching => '',
+                _ => widget.chrome.strings.noMatches,
+              },
+              style: const TextStyle(
+                fontSize: 12,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            );
+            final [previous, next, end] = _searchButtons(state);
+            if (constraints.maxWidth >= _oneRowFrom * scale) {
+              return Row(
+                children: [
+                  const SizedBox(width: 14),
+                  field,
+                  const SizedBox(width: 8),
+                  count,
+                  previous,
+                  next,
+                  end,
+                ],
+              );
+            }
+            return Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(width: 14),
-                Expanded(
-                  child: MediaReaderPlainField(
-                    controller: _query,
-                    focusNode: _queryFocus,
-                    colour: colour,
-                    hint: strings.searchHint,
-                    action: TextInputAction.search,
-                    onChanged: _document.search,
-                    onSubmitted: (_) {
-                      unawaited(_document.nextMatch());
-                      _queryFocus.requestFocus();
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  switch (state) {
-                    _ when state.query.isEmpty => '',
-                    _ when found => strings.position(
-                      state.matchNumber,
-                      state.matchCount,
+                Row(children: [const SizedBox(width: 14), field, end]),
+                Row(
+                  children: [
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: FittedBox(fit: BoxFit.scaleDown, child: count),
+                      ),
                     ),
-                    _ when state.searching => '',
-                    _ => strings.noMatches,
-                  },
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontFeatures: [FontFeature.tabularFigures()],
-                  ),
-                ),
-                MediaReaderGlyphButton(
-                  glyph: MediaReaderGlyph.up,
-                  label: strings.previousMatch,
-                  colour: colour.withValues(alpha: found ? 1 : 0.4),
-                  onPressed: found
-                      ? () => unawaited(_document.previousMatch())
-                      : null,
-                ),
-                MediaReaderGlyphButton(
-                  glyph: MediaReaderGlyph.down,
-                  label: strings.nextMatch,
-                  colour: colour.withValues(alpha: found ? 1 : 0.4),
-                  onPressed: found
-                      ? () => unawaited(_document.nextMatch())
-                      : null,
-                ),
-                MediaReaderGlyphButton(
-                  glyph: MediaReaderGlyph.close,
-                  label: strings.endSearch,
-                  colour: colour,
-                  onPressed: _endSearch,
+                    previous,
+                    next,
+                  ],
                 ),
               ],
             );
           },
         ),
       ),
-    );
+    ),
+  );
+
+  Widget _field() => MediaReaderPlainField(
+    controller: _query,
+    focusNode: _queryFocus,
+    colour: widget.chrome.foreground,
+    hint: widget.chrome.strings.searchHint,
+    action: TextInputAction.search,
+    onChanged: _document.search,
+    onSubmitted: (_) {
+      unawaited(_document.nextMatch());
+      _queryFocus.requestFocus();
+    },
+  );
+
+  /// Previous match, next match, and the end of the search.
+  List<Widget> _searchButtons(MediaReaderDocumentState state) {
+    final strings = widget.chrome.strings;
+    final colour = widget.chrome.foreground;
+    final found = state.matchCount > 0;
+    return [
+      MediaReaderGlyphButton(
+        glyph: MediaReaderGlyph.up,
+        label: strings.previousMatch,
+        colour: colour.withValues(alpha: found ? 1 : 0.4),
+        onPressed: found ? () => unawaited(_document.previousMatch()) : null,
+      ),
+      MediaReaderGlyphButton(
+        glyph: MediaReaderGlyph.down,
+        label: strings.nextMatch,
+        colour: colour.withValues(alpha: found ? 1 : 0.4),
+        onPressed: found ? () => unawaited(_document.nextMatch()) : null,
+      ),
+      MediaReaderGlyphButton(
+        glyph: MediaReaderGlyph.close,
+        label: strings.endSearch,
+        colour: colour,
+        onPressed: _endSearch,
+      ),
+    ];
   }
 }

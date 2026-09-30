@@ -1,3 +1,29 @@
+## 0.8.0 — 2026-09-30
+
+Phase R8, platform polish (MEDIA_READER_PLAN.md):
+
+- Keys for what plays: the space bar plays and pauses, M mutes, Shift
+  with an arrow seeks ten seconds. A picture zooms with + and −, and
+  0 fits it again.
+- `MediaReaderChrome.menu`: the host's actions for the file on screen,
+  on a right-click or a long press with a finger, drawn by the reader
+  where the pointer is. `MediaReaderMenuAction` and
+  `MediaReaderMenuBuilder`.
+- A rail of the files on a wide window, from `railFromWidth` (900
+  pixels) across: each by its poster or its kind, the one on screen
+  marked, a tap goes to it. It hides with the chrome.
+- Less motion, where the platform asks for it: a PDF's page or match
+  gone to is there at once, as pages, zooms and the chrome were
+  already. A PDF's match gone to comes below the chrome's top slots.
+- Text at 200 %: the transport and the document bar grow to 150 % and
+  take two rows on a narrow screen; the strip of pages and the card
+  keep within the width.
+- A picture offers Zoom in, Zoom out and Fit to screen to a screen
+  reader. `MediaReaderStrings.menu`, `rail`, `zoomIn`, `zoomOut` and
+  `zoomToFit`.
+- The example's chrome has the menu, and its window on macOS is wide
+  enough for the rail.
+
 ## 0.7.0 — 2026-09-30
 
 Phase R7, derivatives (MEDIA_READER_PLAN.md):

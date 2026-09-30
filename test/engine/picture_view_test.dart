@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_media_reader/flutter_media_reader.dart';
@@ -296,6 +297,87 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(transformOf(tester).getTranslation().x, closeTo(0, 0.5));
+    });
+
+    testWidgets('plus and minus zoom about the middle, and zero rests', (
+      tester,
+    ) async {
+      await pumpPictures(tester);
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.equal);
+      await tester.sendKeyEvent(LogicalKeyboardKey.equal);
+      await tester.pumpAndSettle();
+      expect(scaleOf(tester), closeTo(2.25, 0.01));
+      expect(pageOf(tester).holdsPaging.value, isTrue);
+      // The middle of the picture is still in the middle of the screen.
+      final middle = MatrixUtils.transformPoint(
+        Matrix4.inverted(transformOf(tester)),
+        centre,
+      );
+      expect(middle.dx, closeTo(centre.dx, 0.5));
+      expect(middle.dy, closeTo(centre.dy, 0.5));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.minus);
+      await tester.pumpAndSettle();
+      expect(scaleOf(tester), closeTo(1.5, 0.01));
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.digit0);
+      await tester.pumpAndSettle();
+      expect(scaleOf(tester), 1);
+      expect(pageOf(tester).holdsPaging.value, isFalse);
+    });
+
+    testWidgets('a screen reader zooms through actions', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpPictures(tester);
+      await tester.pump();
+      final picture = tester.getSemantics(find.byType(InteractiveViewer));
+      expect(picture.flagsCollection.isImage, isTrue);
+      final actions = picture.getSemanticsData().customSemanticsActionIds!;
+      expect(actions.map(CustomSemanticsAction.getAction), [
+        const CustomSemanticsAction(label: 'Zoom in'),
+        const CustomSemanticsAction(label: 'Zoom out'),
+        const CustomSemanticsAction(label: 'Fit to screen'),
+      ]);
+      void perform(String label) => tester.binding.performSemanticsAction(
+        SemanticsActionEvent(
+          type: SemanticsAction.customAction,
+          viewId: tester.view.viewId,
+          nodeId: picture.id,
+          arguments: CustomSemanticsAction.getIdentifier(
+            CustomSemanticsAction(label: label),
+          ),
+        ),
+      );
+
+      perform('Zoom in');
+      await tester.pumpAndSettle();
+      expect(scaleOf(tester), closeTo(1.5, 0.01));
+      expect(pageOf(tester).holdsPaging.value, isTrue);
+
+      perform('Fit to screen');
+      await tester.pumpAndSettle();
+      expect(scaleOf(tester), 1);
+      semantics.dispose();
+    });
+
+    testWidgets('the keys still page between pictures', (tester) async {
+      final shownItems = <String>[];
+      await pumpPictures(
+        tester,
+        onItemShown: (item) => shownItems.add(item.name),
+      );
+      await tester.pump();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.arrowRight);
+      await tester.pumpAndSettle();
+      await tester.sendKeyEvent(LogicalKeyboardKey.equal);
+      await tester.pumpAndSettle();
+
+      expect(shownItems, ['a.png', 'b.png']);
+      // The picture now on screen took the key.
+      expect(scaleOf(tester), closeTo(1.5, 0.01));
     });
 
     testWidgets('the zoom does not outlive the page being on screen', (
