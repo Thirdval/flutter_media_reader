@@ -66,11 +66,15 @@ const List<Sample> samples = [
     preview: 'IMG_0042.jpg',
     previewType: 'image/jpeg',
   ),
+  Sample(name: 'baptism.mp4', contentType: 'video/mp4', size: 384114),
+  // A WebM plays as it is on Android, Windows and Linux; on an iPhone or
+  // a Mac the reader plays the MP4 a server would make of it.
   Sample(
-    name: 'baptism.mp4',
-    contentType: 'video/mp4',
-    size: 48234496,
-    bundled: false,
+    name: 'choir.webm',
+    contentType: 'video/webm',
+    size: 50786,
+    preview: 'choir.mp4',
+    previewType: 'video/mp4',
   ),
   Sample(
     name: 'voice-1790232425618.m4a',

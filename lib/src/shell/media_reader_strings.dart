@@ -39,7 +39,20 @@ class const MediaReaderStrings({
 
   /// What a page says while its file is on the way.
   final String loading = 'Loading',
+
+  /// The transport's buttons, and its scrubber.
+  final String play = 'Play',
+  final String pause = 'Pause',
+  final String mute = 'Mute',
+  final String unmute = 'Unmute',
+  final String seek = 'Position',
+
+  /// The speed button's label: "1.5×".
+  final String Function(double speed) speed = _speed,
 });
+
+String _speed(double speed) =>
+    '${speed.toString().replaceFirst(RegExp(r'\.0$'), '')}×';
 
 String _position(int position, int count) => '$position of $count';
 

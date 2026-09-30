@@ -26,7 +26,9 @@ void main() {
       ..clearLiveImages();
     files.server
       ..served.clear()
-      ..expireNext.clear();
+      ..signed.clear()
+      ..expireNext.clear()
+      ..validFor = const Duration(minutes: 15);
   });
 
   Future<void> pumpExample(WidgetTester tester) async {
@@ -191,6 +193,121 @@ void main() {
     });
   });
 
+  group('video', () {
+    /// The time the transport shows as played, in seconds; null while
+    /// there is no transport.
+    int? played(WidgetTester tester) {
+      final texts = tester.widgetList<Text>(
+        find.descendant(
+          of: find.byType(MediaReaderView),
+          matching: find.byType(Text),
+        ),
+      );
+      for (final text in texts) {
+        final time = RegExp(r'^(\d+):(\d\d)$').firstMatch(text.data ?? '');
+        if (time != null) {
+          return int.parse(time.group(1)!) * 60 + int.parse(time.group(2)!);
+        }
+      }
+      return null;
+    }
+
+    bool shows(String label) =>
+        find.bySemanticsLabel(label).evaluate().isNotEmpty;
+
+    testWidgets('a video plays from a signed URL, pauses, seeks and goes '
+        'on', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpExample(tester);
+
+      await open(tester, 'baptism.mp4');
+      await pumpUntil(tester, () => (played(tester) ?? 0) >= 1);
+      expect(shows('Pause'), isTrue);
+
+      await tester.tap(find.bySemanticsLabel('Pause'));
+      await pumpUntil(tester, () => shows('Play'));
+      final pausedAt = played(tester)!;
+      await tester.pump(const Duration(seconds: 1));
+      expect(played(tester), pausedAt);
+
+      // Three quarters along a video of eight seconds.
+      final track = tester.getRect(find.bySemanticsLabel('Position'));
+      await tester.tapAt(track.centerLeft + Offset(track.width * 0.75, 0));
+      await pumpUntil(tester, () => played(tester) == 6);
+
+      await tester.tap(find.bySemanticsLabel('Play'));
+      await pumpUntil(tester, () => (played(tester) ?? 0) >= 7);
+
+      // The platform's player fetched the file from the server. AVPlayer
+      // asks by ranges from the start; ExoPlayer takes a file this small
+      // in one request.
+      final requests = files.server.served.where(
+        (file) => file.name == 'baptism.mp4',
+      );
+      expect(requests, isNotEmpty);
+      if (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
+        expect(requests.where((file) => file.range != null), isNotEmpty);
+      }
+      // The video after it was not asked for: it is a neighbour.
+      expect(files.server.signed['choir.webm'], isNull);
+      expect(files.server.signed['choir.mp4'], isNull);
+      semantics.dispose();
+    });
+
+    testWidgets('a URL that runs out while the video is paused is renewed, '
+        'and the video goes on where it was', (tester) async {
+      final semantics = tester.ensureSemantics();
+      // Thirty seconds before it expires a URL is no longer used: this
+      // one is stale three seconds after it is signed.
+      files.server.validFor = const Duration(seconds: 33);
+      await pumpExample(tester);
+
+      await open(tester, 'baptism.mp4');
+      await pumpUntil(tester, () => (played(tester) ?? 0) >= 4);
+      await tester.tap(find.bySemanticsLabel('Pause'));
+      await pumpUntil(tester, () => shows('Play'));
+      final pausedAt = played(tester)!;
+      expect(files.server.signed['baptism.mp4'], 1);
+
+      await tester.tap(find.bySemanticsLabel('Play'));
+      await pumpUntil(tester, () => files.server.signed['baptism.mp4'] == 2);
+      await pumpUntil(
+        tester,
+        () => shows('Pause') && (played(tester) ?? 0) > pausedAt,
+      );
+
+      expect(find.text('Try again'), findsNothing);
+      semantics.dispose();
+    });
+
+    testWidgets('the next video plays when it is paged to: a WebM as it is '
+        'where the player plays it, through its MP4 elsewhere', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await pumpExample(tester);
+
+      await open(tester, 'baptism.mp4');
+      await pumpUntil(tester, () => (played(tester) ?? 0) >= 1);
+      await swipeToNext(tester);
+
+      final apple =
+          defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS;
+      final expected = apple ? 'choir.mp4' : 'choir.webm';
+      await pumpUntil(
+        tester,
+        () => files.server.served.any((file) => file.name == expected),
+      );
+      await pumpUntil(
+        tester,
+        () => shows('Pause') && (played(tester) ?? 0) >= 1,
+      );
+
+      expect(find.text('Try again'), findsNothing);
+      semantics.dispose();
+    });
+  });
+
   group('the shell', () {
     testWidgets('a file without an engine opens as its card, pages, and '
         'closes', (tester) async {
@@ -245,7 +362,7 @@ void main() {
 
     testWidgets('a drag down closes the reader', (tester) async {
       await pumpExample(tester);
-      await open(tester, 'baptism.mp4');
+      await open(tester, 'Budget 2026.xlsx');
 
       final height = tester.getSize(find.byType(PageView)).height;
       await tester.drag(find.byType(PageView), Offset(0, height * 0.5));

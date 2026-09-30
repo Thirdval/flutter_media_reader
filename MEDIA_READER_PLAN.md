@@ -80,8 +80,8 @@ host (Tendvine) lends:
 **Phases:**
 - R0 scaffold (built).
 - R1 the core and the shell (built).
-- R2–R6 one kind of file each: pictures (built), video, audio with
-  waveform, PDF, text/tables/archives.
+- R2–R6 one kind of file each: pictures (built), video (built), audio
+  with waveform, PDF, text/tables/archives.
 - R7 Office and HEIC through the host's derivatives.
 - R8 platform polish.
 - R9 Tendvine adopts it (in its own session, in four steps, the first
@@ -242,6 +242,7 @@ class const MediaReaderPolicy({
 class const MediaReaderChrome({
   // Each slot: Widget Function(BuildContext, MediaReaderState).
   topStart, topEnd, bottomStart, bottomEnd, contextPill, status,
+  controls, // the transport for what plays (R3)
   cardActions, // the host's actions on a file's card
   background, foreground,
   strings, // the words the package draws or speaks
@@ -251,6 +252,7 @@ class const MediaReaderChrome({
 class const MediaReaderState({
   item, index, count, policy, // and canExport
   status, // the engine's own
+  playback, // what plays on the page, for the controls (R3)
   close, // null where the reader cannot be closed
 });
 
@@ -270,12 +272,17 @@ final class MediaReaderPage {
   ValueListenable<bool> get isCurrent; // on screen, not a neighbour
   ValueListenable<bool> get chromeVisible;
   final ValueNotifier<String?> status; // "1 of 15", a time
+  final ValueNotifier<MediaReaderPlayback?> playback; // R3
   final ValueNotifier<bool> holdsPaging; // it owns sideways drags
   final ValueNotifier<bool> holdsDismiss; // and downward ones
   Future<MediaReaderLocation> resolve(); // the kept location
   Future<MediaReaderLocation> renew(MediaReaderLocation refused);
   void fail(String reason); // the card takes the engine's place
+  void retry(); // the engine starts afresh (R2)
 }
+
+// What plays: its state, and play, pause, seekTo, setSpeed, setMuted.
+abstract interface class MediaReaderPlayback() { ... }
 ```
 
 What R1 settled beyond the sketch it started from:
@@ -476,7 +483,7 @@ session the same day.
   zoom (R8); an animated picture on a neighbour page keeps decoding
   its frames.
 
-### R3 — Video (M)
+### R3 — Video (M) · built
 
 - **Engine:** `video_player`, with `fvp` registered for Windows and
   Linux (MR3), streaming from the resolved URL with its headers.
@@ -490,6 +497,34 @@ session the same day.
   on Windows and Linux through `fvp` where a machine is available. Two
   videos in a row never play at once, and the tests use a fake
   controller.
+- **Built (2026-09-30):**
+  - `MediaReaderVideoEngine` on `video_player` 2.14 and `fvp` 0.39.
+    `fvp` registers itself on Windows and Linux, so MR3's split is its
+    default and the package calls nothing;
+  - what each player plays is a table in the engine (MP4, MOV and HLS
+    everywhere; WebM and Matroska on Android and the desktop; AVI and
+    WMV through libmdk). A format the platform does not play is shown
+    through its preview: a WebM played through its MP4 on macOS, and
+    as it is on the Pixel;
+  - a neighbour shows its poster and asks for nothing; a video is
+    resolved and opened when its page comes on screen; it stops when
+    the page is left, and two never play at once;
+  - a location that has run out is renewed before a play or a seek,
+    and once when the player gives up under way; the video goes on
+    where it was. On both devices a URL was let run out under a paused
+    video, and the video went on from the same place at a second
+    signature;
+  - `MediaReaderPlayback` and the chrome's `controls` slot (§2.2): the
+    transport is the host's to draw, and the package's plain one is
+    the default;
+  - the tests run the real `video_player` controller on a pretend
+    platform; 225 tests.
+- **Not run:** iOS (the owner runs iOS builds); Windows and Linux (no
+  machine), so `fvp` has been built into the macOS and Android apps
+  but has played nothing yet.
+- **Left for later phases:** the keyboard for play and seek (R8);
+  picture in picture (R8, and it needs a decision: `video_player`
+  offers none on iOS or Android).
 
 ### R4 — Audio and waveform (M)
 
@@ -609,8 +644,8 @@ In every step:
 | --- | --- | --- | --- | --- |
 | R0 | Scaffold: repo, pins, lints, CI, example for five platforms, `MediaKind`, plan, CLAUDE.md | ☑ built 2026-09-30 — analyze clean, 5 tests, example builds for macOS | initial commit | ☐ |
 | R1 | Core and shell: items, sources, policy, registry, pager, chrome slots, the card engine | ☑ built 2026-09-30 — analyze clean, 117 tests, example run on Android and macOS | `d2c235e`; tag `v0.1.0` when the owner asks | ☐ |
-| R2 | Pictures | ☑ built 2026-09-30 — analyze clean, 182 tests, example run on Android and macOS | the 0.2.0 commit; tag `v0.2.0` when the owner asks | ☐ |
-| R3 | Video (`video_player` + `fvp`) | ☐ | | ☐ |
+| R2 | Pictures | ☑ built 2026-09-30 — analyze clean, 182 tests, example run on Android and macOS | `c6ba3f5`; tag `v0.2.0` when the owner asks | ☐ |
+| R3 | Video (`video_player` + `fvp`) | ☑ built 2026-09-30 — analyze clean, 225 tests, example run on Android and macOS | the 0.3.0 commit; tag `v0.3.0` when the owner asks | ☐ |
 | R4 | Audio and waveform, `MediaReaderAudioBar` | ☐ | | ☐ |
 | R5 | PDF (`pdfrx`) | ☐ | | ☐ |
 | R6 | Text, Markdown, tables, archives | ☐ | | ☐ |
@@ -626,6 +661,7 @@ In every step:
 | R0 | – | – | ✓ build | – | – |
 | R1 | – | ✓ | ✓ | – | – |
 | R2 | – | ✓ | ✓ | – | – |
+| R3 | – | ✓ | ✓ | – | – |
 
 Each ✓ is the example's integration test, run on a Pixel 10a with
 Android 17 and on macOS 27. iOS was not run: the owner runs iOS
@@ -636,6 +672,9 @@ builds. Windows and Linux were not run: no machine.
   48-megapixel JPEG decoded within the screen; zoom; paging; a HEIC
   as it is on macOS and through its JPEG on Android; an expired URL
   resolved again.
+- R3: eleven tests. An MP4 played, paused, sought and resumed by
+  AVPlayer and by ExoPlayer; a URL renewed under a paused video; a
+  WebM as it is on Android and through its MP4 on macOS.
 
 Legend: ☐ not started · ◐ in progress · ☑ done (commit) · ✔ owner
 verified · ⊘ blocked (reason). Update the row in the same commit as
@@ -723,10 +762,14 @@ commit and a guide when each batch lands.
   its author before Tendvine ships to the stores. If it cannot be,
   `media_kit` (libmpv, LGPL) is the desktop fallback behind the same
   interface.
-- **App size:** `fvp` bundles libmdk and FFmpeg on Windows and Linux;
-  `pdfrx` bundles PDFium on every platform. Measure in R10.
+- **App size:** `fvp` bundles libmdk and FFmpeg, and not only on
+  Windows and Linux: its pod and its Android library are linked into
+  the iOS, macOS and Android builds too, though it plays nothing
+  there. `pdfrx` bundles PDFium on every platform. Measure in R10.
 - **Codecs:** AVPlayer refuses webm and mkv. See MR3's condition for
-  widening `fvp`.
+  widening `fvp`. Since R3 such a file is shown through its preview
+  (the server's MP4) where the host gives one, which may make the
+  widening unnecessary.
 - **Expiring URLs** mid-playback or mid-PDF: re-resolve and resume
   (R1 contract, tested in R3 and R5).
 - **Large files:** caps and virtualisation in R2, R5 and R6. The

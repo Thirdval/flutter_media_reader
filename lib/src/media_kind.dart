@@ -80,6 +80,7 @@ enum MediaKind() {
     if (_markdown.contains(type)) return MediaKind.markdown;
     if (_tables.contains(type)) return MediaKind.table;
     if (_structuredText.contains(type)) return MediaKind.text;
+    if (_playlists.contains(type)) return MediaKind.video;
     return switch (type.split('/').first) {
       'image' => MediaKind.picture,
       'video' => MediaKind.video,
@@ -118,6 +119,13 @@ enum MediaKind() {
 
   static const Set<String> _markdown = {'text/markdown', 'text/x-markdown'};
 
+  /// HLS playlists: a video, whatever the type's family says.
+  static const Set<String> _playlists = {
+    'application/vnd.apple.mpegurl',
+    'application/x-mpegurl',
+    'audio/mpegurl',
+  };
+
   static const Set<String> _tables = {
     'text/csv',
     'text/tab-separated-values',
@@ -141,7 +149,7 @@ enum MediaKind() {
         MediaKind.picture,
         'jpg jpeg png gif webp heic heif bmp tif tiff svg avif ico',
       ),
-      (MediaKind.video, 'mp4 mov m4v webm mkv avi 3gp mpeg mpg wmv'),
+      (MediaKind.video, 'mp4 mov m4v webm mkv avi 3gp mpeg mpg wmv m3u8'),
       (
         MediaKind.audio,
         'mp3 m4a m4b aac wav flac ogg oga opus weba amr aif aiff wma',

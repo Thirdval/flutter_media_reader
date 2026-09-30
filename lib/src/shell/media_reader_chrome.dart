@@ -7,6 +7,7 @@ import 'package:flutter/widgets.dart';
 
 import '../item/media_reader_item.dart';
 import '../item/media_reader_policy.dart';
+import 'media_reader_playback.dart';
 import 'media_reader_strings.dart';
 
 /// What a chrome slot is told: the item on screen and the reader around
@@ -22,6 +23,10 @@ class const MediaReaderState({
   /// The engine's own status for this item, when it has one: "1 of 15",
   /// a time.
   final String? status,
+
+  /// What plays on the page, when its engine plays something: a video,
+  /// an audio file.
+  final MediaReaderPlayback? playback,
 
   /// Closes the reader. Null where it cannot be closed: a pane that is
   /// always there.
@@ -62,6 +67,11 @@ class const MediaReaderChrome({
   /// The engine's own status. By default, a pill with
   /// [MediaReaderState.status] while there is one.
   final MediaReaderSlotBuilder? status,
+
+  /// The transport for what plays: play and pause, the scrubber, the
+  /// time, speed and mute. By default, a plain bar while
+  /// [MediaReaderState.playback] is there.
+  final MediaReaderSlotBuilder? controls,
 
   /// The host's actions on a file's card: save, share. Empty by default,
   /// because export is only ever the host's action (MR8).

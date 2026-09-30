@@ -1,3 +1,24 @@
+## 0.3.0 — 2026-09-30
+
+Phase R3, video (MEDIA_READER_PLAN.md):
+
+- `MediaReaderVideoEngine`, on the `video_player` API: AVPlayer on iOS
+  and macOS, ExoPlayer on Android, `fvp` on Windows and Linux. A
+  format the platform's player does not play is shown through its
+  preview.
+- A video is resolved and opened when its page comes on screen, stops
+  when the page is left and goes on when it is back; two never play
+  at once; the player is released with its page.
+- A location that has run out is renewed before a play or a seek, and
+  once when the player gives up under way; the video goes on where it
+  was.
+- `MediaReaderPlayback` and the chrome's `controls` slot: what plays
+  on a page, and the transport that drives it. The plain default
+  plays, scrubs, shows the time played and left, changes speed and
+  mutes.
+- An HLS playlist is read as a video.
+- The example plays bundled videos from its loopback server.
+
 ## 0.2.0 — 2026-09-30
 
 Phase R2, pictures (MEDIA_READER_PLAN.md):

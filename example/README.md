@@ -11,6 +11,11 @@ the device's loopback: it signs URLs that expire, honours byte ranges
 and refuses what is expired, as a host's CDN would. The example needs
 no network and no account.
 
+That server speaks plain HTTP, so the example allows it on each
+platform: cleartext traffic on Android, local networking in the
+Info.plist on iOS and macOS, and the network entitlements of the macOS
+sandbox. An app whose files come over HTTPS needs none of these.
+
 ```sh
 fvm flutter run -d <device>
 ```

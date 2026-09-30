@@ -19,6 +19,7 @@ import 'chrome_layer.dart';
 import 'dismissible.dart';
 import 'media_reader_chrome.dart';
 import 'media_reader_page.dart';
+import 'media_reader_playback.dart';
 import 'page_host.dart';
 
 /// The reader, as a widget: embed it in a pane, or open it as a route
@@ -66,6 +67,10 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
   /// The status of the page on screen. The chrome's slots follow it on
   /// their own: a status that ticks rebuilds nothing else.
   final ValueNotifier<String?> _status = ValueNotifier(null);
+
+  /// What plays on the page on screen: the slots are rebuilt when it
+  /// comes or goes, and the transport follows its state by itself.
+  final ValueNotifier<MediaReaderPlayback?> _playback = ValueNotifier(null);
   final Map<String, MediaReaderPage> _pages = {};
   final Map<(String, bool), MediaReaderResolver> _resolvers = {};
   MediaReaderPage? _watched;
@@ -103,18 +108,25 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
     final page = widget.items.isEmpty ? null : _pages[widget.items[_index].id];
     if (identical(page, _watched)) return;
     _watched?.status.removeListener(_onStatus);
+    _watched?.playback.removeListener(_onStatus);
     _watched?.holdsPaging.removeListener(_onHold);
     _watched?.holdsDismiss.removeListener(_onHold);
     _watched = page;
     page?.status.addListener(_onStatus);
+    page?.playback.addListener(_onStatus);
     page?.holdsPaging.addListener(_onHold);
     page?.holdsDismiss.addListener(_onHold);
     _onStatus();
   }
 
+  /// The page on screen has another status, or something else playing.
   void _onStatus() {
     final status = _watched?.status.value;
-    _whenNotBuilding(() => _status.value = status);
+    final playback = _watched?.playback.value;
+    _whenNotBuilding(() {
+      _status.value = status;
+      _playback.value = playback;
+    });
   }
 
   void _onHold() => _whenNotBuilding(() => setState(() {}));
@@ -211,6 +223,7 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
   @override
   void dispose() {
     _watched?.status.removeListener(_onStatus);
+    _watched?.playback.removeListener(_onStatus);
     _watched?.holdsPaging.removeListener(_onHold);
     _watched?.holdsDismiss.removeListener(_onHold);
     _pager.dispose();
@@ -218,6 +231,7 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
     _chromeVisible.dispose();
     _dismissing.dispose();
     _status.dispose();
+    _playback.dispose();
     super.dispose();
   }
 
@@ -309,16 +323,17 @@ class _MediaReaderViewState() extends State<MediaReaderView> {
                 MediaReaderChromeLayer(
                   visible: _chromeVisible,
                   dismissing: _dismissing,
-                  child: ValueListenableBuilder(
-                    valueListenable: _status,
-                    builder: (context, status, _) => MediaReaderChromeSlots(
+                  child: ListenableBuilder(
+                    listenable: Listenable.merge([_status, _playback]),
+                    builder: (context, _) => MediaReaderChromeSlots(
                       chrome: chrome,
                       state: MediaReaderState(
                         item: item,
                         index: _index,
                         count: items.length,
                         policy: widget.policy,
-                        status: status,
+                        status: _status.value,
+                        playback: _playback.value,
                         close: close,
                       ),
                     ),

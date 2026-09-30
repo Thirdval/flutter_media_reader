@@ -5,10 +5,11 @@ audio with waveforms, PDF, Office documents (through a PDF your server
 makes), text, tables and archives, on iOS, Android, macOS, Windows and
 Linux.
 
-> **Status: pre-release (phase R2).** The reader's shell, its host
-> contract and the picture engine are in. The engines for the other
-> kinds arrive phase by phase; until then those files show their card.
-> Progress: [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
+> **Status: pre-release (phase R3).** The reader's shell, its host
+> contract, and the engines for pictures and video are in. The engines
+> for the other kinds arrive phase by phase; until then those files
+> show their card. Progress:
+> [MEDIA_READER_PLAN.md](MEDIA_READER_PLAN.md) §5.
 
 ## Principles
 
@@ -157,7 +158,8 @@ MediaReaderPolicy(
 
 `MediaReaderChrome` takes a builder for each slot. Each is given a
 `MediaReaderState`: the item on screen, its `index` and the `count`,
-the `policy` (and `canExport`), the engine's `status`, and `close`.
+the `policy` (and `canExport`), the engine's `status`, what plays on
+the page (`playback`), and `close`.
 
 | Slot | For | Plain default |
 | --- | --- | --- |
@@ -166,6 +168,7 @@ the `policy` (and `canExport`), the engine's `status`, and `close`.
 | `bottomStart` | Your actions: reply, forward | Empty |
 | `bottomEnd` | More | Empty |
 | `contextPill` | "Shared in #channel" | Empty |
+| `controls` | The transport for what plays | A bar: play, scrubber, time, speed, mute |
 | `status` | The engine's status: "1 of 15", a time | A pill, while there is one |
 | `cardActions` | Your actions on a file's card: save, share | Empty |
 
@@ -231,6 +234,7 @@ class const ModelEngine() implements MediaReaderEngine {
 | `resolve()` | Where a remote file is: the kept location, or a fresh one. |
 | `renew(refused)` | A fresh location after a refusal (an expired URL). |
 | `status` | Set it to show "1 of 15" or a time in the chrome. |
+| `playback` | Set it to what plays on the page: the chrome's controls show its state and drive it. |
 | `holdsPaging`, `holdsDismiss` | Set while the engine owns sideways or downward drags: zoomed, or scrolled away from its top. |
 | `chromeVisible`, `toggleChrome()` | For an engine with controls of its own, or one that takes taps. |
 | `fail(reason)` | The engine cannot show the file: its card takes the engine's place, with the reason. |
@@ -305,6 +309,51 @@ MediaReaderEngines.standard.withFirst([
 It is asked only while the policy allows export: such a cache is
 usually on disk, and with export off nothing is kept there.
 
+## Video
+
+`MediaReaderVideoEngine` plays through the `video_player` API: AVPlayer
+on iOS and macOS, ExoPlayer on Android, and
+[`fvp`](https://pub.dev/packages/fvp) (libmdk) on Windows and Linux,
+where `fvp` registers itself as `video_player`'s implementation.
+
+| Format | Where |
+| --- | --- |
+| MP4, M4V, MOV, 3GP, HLS | Every platform |
+| WebM, Matroska, MPEG-TS | Android, Windows, Linux |
+| AVI, MPEG, WMV, FLV | Windows, Linux |
+| A format the platform does not play | Through its `preview`, the MP4 your server makes; else the card |
+
+- **Paging.** A neighbour shows its poster and asks for nothing. A
+  video is resolved and opened when its page comes on screen, stops
+  when the page is left, and goes on when the page is back if it was
+  playing. Two videos never play at once. The player is released with
+  its page.
+- **Controls.** The plain transport plays and pauses, scrubs, shows
+  the time played and left, goes round the speeds (1, 1.5, 2) and
+  mutes. It hides with the chrome. Your own goes in the `controls`
+  slot, driven by `state.playback`:
+
+  ```dart
+  MediaReaderChrome(
+    controls: (context, state) => switch (state.playback) {
+      null => const SizedBox.shrink(),
+      final playback => GlassTransport(playback),
+    },
+  )
+  ```
+
+- **A location that runs out.** Before a play or a seek, the location
+  is checked: one that has expired gives way to a fresh one, and the
+  video goes on at the same place. When the player gives up under way,
+  a fresh location is asked for once; a second failure at the same
+  place is the file's own, and goes to the card.
+- **Sources.** A signed URL or a file. A video in memory has no
+  player, and shows its card.
+
+`fvp` is a dependency on every platform, though it plays only on
+Windows and Linux: libmdk is linked into the iOS, Android and macOS
+builds as well.
+
 ## Engines by kind
 
 Every engine runs on all five platforms.
@@ -312,7 +361,7 @@ Every engine runs on all five platforms.
 | Kind | Engine | Status |
 | --- | --- | --- |
 | Pictures | Flutter `Image` + `InteractiveViewer` | In |
-| Video | `video_player` (AVPlayer, ExoPlayer) with [`fvp`](https://pub.dev/packages/fvp) on Windows and Linux | Planned |
+| Video | `video_player` (AVPlayer, ExoPlayer) with [`fvp`](https://pub.dev/packages/fvp) on Windows and Linux | In |
 | Audio | [`just_audio`](https://pub.dev/packages/just_audio); `fvp` on Windows and Linux | Planned |
 | Waveform | drawn from peaks your server computes | Planned |
 | PDF | [`pdfrx`](https://pub.dev/packages/pdfrx) (PDFium) | Planned |

@@ -25,6 +25,7 @@ class SampleServer(
     'gif': 'image/gif',
     'heic': 'image/heic',
     'mp4': 'video/mp4',
+    'webm': 'video/webm',
     'm4a': 'audio/mp4',
     'mp3': 'audio/mpeg',
     'ogg': 'audio/ogg',

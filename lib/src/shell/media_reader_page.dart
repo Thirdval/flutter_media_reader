@@ -9,6 +9,7 @@ import '../item/media_reader_policy.dart';
 import '../item/media_reader_resolver.dart';
 import '../item/media_reader_source.dart';
 import 'media_reader_chrome.dart';
+import 'media_reader_playback.dart';
 
 /// One page of the reader, as its engine sees it.
 ///
@@ -47,6 +48,11 @@ final class MediaReaderPage({
   /// The engine's own status for the chrome: "1 of 15", a time. Null for
   /// none.
   final ValueNotifier<String?> status = ValueNotifier(null);
+
+  /// What plays on the page, once its engine has something playing: the
+  /// chrome's transport controls show its state and drive it. Null for a
+  /// page that plays nothing.
+  final ValueNotifier<MediaReaderPlayback?> playback = ValueNotifier(null);
 
   /// True while the engine owns sideways drags (a zoomed picture being
   /// panned): the shell stops paging on a drag.
@@ -87,6 +93,7 @@ final class MediaReaderPage({
     count: _count,
     policy: _policy,
     status: status.value,
+    playback: playback.value,
     close: _close,
   );
 
@@ -142,6 +149,7 @@ final class MediaReaderPage({
     if (_disposed) return;
     _disposed = true;
     status.dispose();
+    playback.dispose();
     holdsPaging.dispose();
     holdsDismiss.dispose();
     _current.dispose();

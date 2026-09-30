@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 
 import 'default_slots.dart';
 import 'media_reader_chrome.dart';
+import 'transport_bar.dart';
 
 /// Where each part of the reader comes in the reading order: the top
 /// slots, the page, then what sits below it.
@@ -15,10 +16,11 @@ abstract final class MediaReaderOrder() {
   static const double topStart = 0;
   static const double topEnd = 1;
   static const double page = 2;
-  static const double status = 3;
-  static const double contextPill = 4;
-  static const double bottomStart = 5;
-  static const double bottomEnd = 6;
+  static const double controls = 3;
+  static const double status = 4;
+  static const double contextPill = 5;
+  static const double bottomStart = 6;
+  static const double bottomEnd = 7;
 }
 
 /// Shows and hides the chrome, and fades it as a dismissing drag goes on.
@@ -105,6 +107,19 @@ class const MediaReaderChromeSlots({
               ],
             ),
             const Spacer(),
+            _slot(
+              context,
+              MediaReaderOrder.controls,
+              chrome.controls,
+              switch (state.playback) {
+                null => null,
+                final playback => MediaReaderTransportBar(
+                  playback: playback,
+                  chrome: chrome,
+                ),
+              },
+            ),
+            const SizedBox(height: 8),
             Center(
               child: _slot(
                 context,

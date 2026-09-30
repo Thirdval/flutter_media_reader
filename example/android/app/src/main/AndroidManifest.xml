@@ -2,7 +2,11 @@
     <!-- The example serves its samples from a loopback server inside the
          app, and the reader fetches them from it. -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- usesCleartextTraffic: the platform's players fetch the samples
+         from the loopback server over plain HTTP. A host's files come
+         over HTTPS and need no such thing. -->
     <application
+        android:usesCleartextTraffic="true"
         android:label="flutter_media_reader_example"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
