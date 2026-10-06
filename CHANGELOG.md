@@ -1,3 +1,14 @@
+## 1.1.1 — 2026-10-06
+
+- The chrome rides above the on-screen keyboard: on a phone or a
+  tablet a document's search field sat under it, and you typed blind.
+  The slots now take the keyboard's room at the bottom (SafeArea keeps
+  the system's bars only).
+- Esc ends a document's search on a Mac too. A focused text field there
+  keeps the Esc key and hands up a `DismissIntent` from the platform's
+  `cancelOperation:`; the search now ends on that intent as well as on
+  the key.
+
 ## 1.1.0 — 2026-10-01
 
 - `MediaReaderChrome.glyph`: the host's own icons on the plain
