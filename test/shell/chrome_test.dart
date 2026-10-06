@@ -52,6 +52,24 @@ void main() {
       }
     });
 
+    testWidgets('ride above the keyboard', (tester) async {
+      // 800 by 600, the keyboard's 300 at the bottom.
+      tester.view.viewInsets = const FakeViewPadding(bottom: 900);
+      addTearDown(tester.view.resetViewInsets);
+
+      await pumpReader(
+        tester,
+        items: pictures(),
+        engines: engines,
+        chrome: hostChrome({}),
+      );
+
+      expect(
+        tester.getBottomLeft(find.text('bottom end')).dy,
+        lessThanOrEqualTo(300),
+      );
+    });
+
     testWidgets('a slot is told the item on screen and its place', (
       tester,
     ) async {

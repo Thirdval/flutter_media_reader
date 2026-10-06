@@ -73,102 +73,112 @@ class const MediaReaderChromeSlots({
   @override
   Widget build(BuildContext context) {
     final status = state.status;
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: _slot(
-                      context,
-                      MediaReaderOrder.topStart,
-                      chrome.topStart,
-                      MediaReaderDefaultTitle(state: state, chrome: chrome),
+    // The keyboard's room: a search field rides above it. SafeArea
+    // keeps the system's bars only, never the keyboard.
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: _slot(
+                        context,
+                        MediaReaderOrder.topStart,
+                        chrome.topStart,
+                        MediaReaderDefaultTitle(state: state, chrome: chrome),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                _slot(
-                  context,
-                  MediaReaderOrder.topEnd,
-                  chrome.topEnd,
-                  switch (state.close) {
-                    null => null,
-                    final close => MediaReaderDefaultClose(
-                      onPressed: close,
-                      chrome: chrome,
-                    ),
-                  },
-                ),
-              ],
-            ),
-            const Spacer(),
-            _slot(context, MediaReaderOrder.controls, chrome.controls, switch ((
-              state.playback,
-              state.document,
-            )) {
-              (final playback?, _) => MediaReaderTransportBar(
-                playback: playback,
-                chrome: chrome,
-                peaks: state.item.peaks,
-              ),
-              (_, final document?) => MediaReaderDocumentBar(
-                document: document,
-                chrome: chrome,
-              ),
-              _ => null,
-            }),
-            const SizedBox(height: 8),
-            Center(
-              child: _slot(
-                context,
-                MediaReaderOrder.status,
-                chrome.status,
-                status == null
-                    ? null
-                    : MediaReaderDefaultStatus(status: status, chrome: chrome),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: _slot(
-                context,
-                MediaReaderOrder.contextPill,
-                chrome.contextPill,
-                null,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: _slot(
-                      context,
-                      MediaReaderOrder.bottomStart,
-                      chrome.bottomStart,
-                      null,
-                    ),
+                  const SizedBox(width: 12),
+                  _slot(
+                    context,
+                    MediaReaderOrder.topEnd,
+                    chrome.topEnd,
+                    switch (state.close) {
+                      null => null,
+                      final close => MediaReaderDefaultClose(
+                        onPressed: close,
+                        chrome: chrome,
+                      ),
+                    },
                   ),
-                ),
-                const SizedBox(width: 12),
-                _slot(
+                ],
+              ),
+              const Spacer(),
+              _slot(
+                context,
+                MediaReaderOrder.controls,
+                chrome.controls,
+                switch ((state.playback, state.document)) {
+                  (final playback?, _) => MediaReaderTransportBar(
+                    playback: playback,
+                    chrome: chrome,
+                    peaks: state.item.peaks,
+                  ),
+                  (_, final document?) => MediaReaderDocumentBar(
+                    document: document,
+                    chrome: chrome,
+                  ),
+                  _ => null,
+                },
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: _slot(
                   context,
-                  MediaReaderOrder.bottomEnd,
-                  chrome.bottomEnd,
+                  MediaReaderOrder.status,
+                  chrome.status,
+                  status == null
+                      ? null
+                      : MediaReaderDefaultStatus(
+                          status: status,
+                          chrome: chrome,
+                        ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Center(
+                child: _slot(
+                  context,
+                  MediaReaderOrder.contextPill,
+                  chrome.contextPill,
                   null,
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: _slot(
+                        context,
+                        MediaReaderOrder.bottomStart,
+                        chrome.bottomStart,
+                        null,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  _slot(
+                    context,
+                    MediaReaderOrder.bottomEnd,
+                    chrome.bottomEnd,
+                    null,
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
