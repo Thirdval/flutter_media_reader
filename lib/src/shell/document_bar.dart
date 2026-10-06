@@ -153,65 +153,78 @@ class _MediaReaderDocumentBarState() extends State<MediaReaderDocumentBar> {
     );
   }
 
-  Widget _search() => CallbackShortcuts(
-    // Esc ends the search before it closes the reader.
-    bindings: {const SingleActivator(LogicalKeyboardKey.escape): _endSearch},
-    child: _bar(
-      child: ValueListenableBuilder(
-        valueListenable: _document.state,
-        builder: (context, state, _) => LayoutBuilder(
-          builder: (context, constraints) {
-            final scale = MediaQuery.textScalerOf(context).scale(1);
-            final field = Expanded(child: _field());
-            final count = Text(
-              switch (state) {
-                _ when state.query.isEmpty => '',
-                _ when state.matchCount > 0 => widget.chrome.strings.position(
-                  state.matchNumber,
-                  state.matchCount,
+  Widget _search() => Actions(
+    // On a Mac, or an iPad with a keyboard, a focused field keeps the
+    // Esc key to itself and hands up a DismissIntent: that ends the
+    // search too.
+    actions: {
+      DismissIntent: CallbackAction<DismissIntent>(
+        onInvoke: (_) {
+          _endSearch();
+          return null;
+        },
+      ),
+    },
+    child: CallbackShortcuts(
+      // Esc ends the search before it closes the reader.
+      bindings: {const SingleActivator(LogicalKeyboardKey.escape): _endSearch},
+      child: _bar(
+        child: ValueListenableBuilder(
+          valueListenable: _document.state,
+          builder: (context, state, _) => LayoutBuilder(
+            builder: (context, constraints) {
+              final scale = MediaQuery.textScalerOf(context).scale(1);
+              final field = Expanded(child: _field());
+              final count = Text(
+                switch (state) {
+                  _ when state.query.isEmpty => '',
+                  _ when state.matchCount > 0 => widget.chrome.strings.position(
+                    state.matchNumber,
+                    state.matchCount,
+                  ),
+                  _ when state.searching => '',
+                  _ => widget.chrome.strings.noMatches,
+                },
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontFeatures: [FontFeature.tabularFigures()],
                 ),
-                _ when state.searching => '',
-                _ => widget.chrome.strings.noMatches,
-              },
-              style: const TextStyle(
-                fontSize: 12,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-            );
-            final [previous, next, end] = _searchButtons(state);
-            if (constraints.maxWidth >= _oneRowFrom * scale) {
-              return Row(
-                children: [
-                  const SizedBox(width: 14),
-                  field,
-                  const SizedBox(width: 8),
-                  count,
-                  previous,
-                  next,
-                  end,
-                ],
               );
-            }
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(children: [const SizedBox(width: 14), field, end]),
-                Row(
+              final [previous, next, end] = _searchButtons(state);
+              if (constraints.maxWidth >= _oneRowFrom * scale) {
+                return Row(
                   children: [
                     const SizedBox(width: 14),
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: FittedBox(fit: BoxFit.scaleDown, child: count),
-                      ),
-                    ),
+                    field,
+                    const SizedBox(width: 8),
+                    count,
                     previous,
                     next,
+                    end,
                   ],
-                ),
-              ],
-            );
-          },
+                );
+              }
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(children: [const SizedBox(width: 14), field, end]),
+                  Row(
+                    children: [
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: FittedBox(fit: BoxFit.scaleDown, child: count),
+                        ),
+                      ),
+                      previous,
+                      next,
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     ),

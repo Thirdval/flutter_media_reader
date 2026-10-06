@@ -341,6 +341,26 @@ void main() {
       semantics.dispose();
     });
 
+    testWidgets(
+      'on a Mac, the field hands up Esc as a dismiss: the search ends',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        await pumpDocuments(tester);
+        await tester.pumpAndSettle();
+        await tapButton(tester, 'Search');
+        await tester.enterText(field, 'harvest');
+        await tester.pumpAndSettle();
+
+        // What the platform's cancelOperation: selector turns into.
+        Actions.maybeInvoke(primaryFocus!.context!, const DismissIntent());
+        await tester.pumpAndSettle();
+        expect(field, findsNothing);
+        expect(dismissed, 0);
+        semantics.dispose();
+      },
+      variant: TargetPlatformVariant.only(TargetPlatform.macOS),
+    );
+
     testWidgets('the arrows move in the field: they do not change the file', (
       tester,
     ) async {
