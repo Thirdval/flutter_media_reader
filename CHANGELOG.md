@@ -1,3 +1,10 @@
+## 1.1.2 — 2026-11-07
+
+- A document's search count names the match on show: it read "0 of 3"
+  while the first match was already highlighted, and Next or Previous
+  within one page left the number where it was. pdfrx moves to a match
+  without telling its listeners; the reader's searcher now does.
+
 ## 1.1.1 — 2026-10-06
 
 - The chrome rides above the on-screen keyboard: on a phone or a

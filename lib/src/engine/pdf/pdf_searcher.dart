@@ -30,6 +30,10 @@ final class MediaReaderPdfSearcher(
   /// the slots as often as not.
   @override
   Future<void> goToMatch(PdfPageTextRange match) async {
+    // pdfrx sets the current match before it comes here but tells no
+    // one: the count read "0 of 3" over a highlighted first match, and
+    // Next within a page left it where it was.
+    notifyListeners();
     final controller = this.controller;
     if (controller == null || !controller.isReady) return;
     final rect = controller.calcRectForRectInsidePage(
